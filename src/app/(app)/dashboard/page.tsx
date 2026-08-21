@@ -1,5 +1,13 @@
 import Link from "next/link";
-import { TrendingDown, UserMinus, ArrowRight, ScanFace, MapPin, Sparkles } from "lucide-react";
+import {
+  ArrowRight,
+  ScanFace,
+  MapPin,
+  Sparkles,
+  TrendingDown,
+  UserMinus,
+  UsersRound,
+} from "lucide-react";
 import { requireProfile } from "@/lib/auth";
 import {
   getCenterStats,
@@ -12,9 +20,24 @@ import {
   atRiskStudents,
   understaffedCenters,
 } from "@/lib/queries";
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, EmptyState, PageHeader, Stat, Table, Td, Th } from "@/components/ui";
+import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  EmptyState,
+  Meter,
+  PageHeader,
+  Stat,
+  Table,
+  Td,
+  Th,
+} from "@/components/ui";
 import { ChartFrame, TrendChart, BarsChart, MiniBar } from "@/components/charts";
-import { LEVEL_LABELS } from "@/lib/utils";
+import { PlanTrack, type PlanItem } from "@/components/plan-track";
+import { LEVEL_LABELS, formatDate } from "@/lib/utils";
 
 export const metadata = { title: "Dashboard — UPAY Footpathshala" };
 
@@ -29,10 +52,40 @@ export default async function DashboardPage() {
   ]);
 
   const headline = await getHeadline(supabase, profile, centers);
+
+  // The lesson plan for the centre this person actually works at.
+  const planCenterId = profile.center_id ?? centers[0]?.center_id ?? null;
+  const { data: plan } = planCenterId
+    ? await supabase
+        .from("center_curriculum")
+        .select("id, scheduled_for, status, curriculum_units(title, subject, description, duration_min)")
+        .eq("center_id", planCenterId)
+        .order("scheduled_for", { ascending: false })
+        .limit(5)
+    : { data: [] };
+
+  const planItems: PlanItem[] = ((plan ?? []) as unknown as {
+    id: string;
+    scheduled_for: string;
+    status: PlanItem["status"];
+    curriculum_units: { title: string; subject: string; description: string | null; duration_min: number } | null;
+  }[])
+    .filter((p) => p.curriculum_units)
+    .map((p) => ({
+      id: p.id,
+      title: p.curriculum_units!.title,
+      subject: p.curriculum_units!.subject,
+      description: p.curriculum_units!.description,
+      when: formatDate(p.scheduled_for),
+      status: p.status,
+      durationMin: p.curriculum_units!.duration_min,
+      href: "/curriculum",
+    }));
+
   const weekly = toWeekly(daily);
-  const declining = decliningCenters(centers).slice(0, 5);
-  const atRisk = atRiskStudents(students).slice(0, 8);
-  const understaffed = understaffedCenters(centers).slice(0, 5);
+  const declining = decliningCenters(centers).slice(0, 4);
+  const atRisk = atRiskStudents(students).slice(0, 6);
+  const understaffed = understaffedCenters(centers).slice(0, 4);
   const topVolunteers = volunteers.slice(0, 6);
 
   const centreBars = [...centers]
@@ -43,272 +96,288 @@ export default async function DashboardPage() {
 
   const isField = profile.role === "volunteer" || profile.role === "teacher";
   const maxHours = Math.max(1, ...topVolunteers.map((v) => Number(v.total_hours)));
+  const delivered = planItems.filter((p) => p.status === "delivered").length;
 
   return (
     <>
       <PageHeader
-        title={`Good to see you, ${profile.full_name.split(" ")[0]}`}
+        title={`Hello, ${profile.full_name.split(" ")[0]}`}
+        emoji="👋"
         description={
           profile.role === "admin"
-            ? "Programme-wide view across every zone."
+            ? "Every zone, every centre — and what needs you today."
             : profile.role === "coordinator"
-              ? "Your zone, at a glance."
-              : "Your centre, at a glance."
+              ? "Your zone at a glance, with the problems surfaced first."
+              : "Your centre today."
         }
         action={
-          isField ? (
-            <div className="flex gap-2">
-              <Link href="/checkin">
-                <Button variant="outline">
-                  <MapPin /> Check in
-                </Button>
-              </Link>
-              <Link href="/attendance/new">
+          <div className="flex flex-wrap gap-2">
+            {isField ? (
+              <>
+                <Link href="/checkin">
+                  <Button variant="outline">
+                    <MapPin /> Check in
+                  </Button>
+                </Link>
+                <Link href="/attendance/new">
+                  <Button>
+                    <ScanFace /> Take attendance
+                  </Button>
+                </Link>
+              </>
+            ) : (
+              <Link href="/upaygpt">
                 <Button>
-                  <ScanFace /> Take attendance
+                  <Sparkles /> Ask UpayGPT
                 </Button>
               </Link>
-            </div>
-          ) : (
-            <Link href="/upaygpt">
-              <Button variant="outline">
-                <Sparkles /> Ask UpayGPT
-              </Button>
-            </Link>
-          )
+            )}
+          </div>
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Stat label="Active students" value={headline.students} sub={`${headline.centers} centres`} tone="primary" />
+      {/* ------------------------------------------------------ stat tiles */}
+      <div className="stagger grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Stat
-          label="Attendance (30 days)"
+          label="Children enrolled"
+          value={headline.students}
+          sub={`across ${headline.centers} centre${headline.centers === 1 ? "" : "s"}`}
+          tone="sky"
+          emoji="🧒"
+        />
+        <Stat
+          label="Attendance, last 30 days"
           value={`${headline.attendance30}%`}
           sub={`${headline.sessions30} sessions held`}
-          tone={headline.attendance30 >= 70 ? "success" : headline.attendance30 >= 55 ? "warning" : "danger"}
+          tone={headline.attendance30 >= 70 ? "mint" : headline.attendance30 >= 55 ? "butter" : "peach"}
+          emoji={headline.attendance30 >= 70 ? "🎉" : "👀"}
         />
-        <Stat label="Volunteers & teachers" value={headline.volunteers} sub="Assigned to a centre" tone="accent" />
+        <Stat
+          label="Volunteers & teachers"
+          value={headline.volunteers}
+          sub="assigned to a centre"
+          tone="lilac"
+          emoji="🤝"
+        />
         <Stat
           label="Service hours this month"
           value={headline.hoursThisMonth.toLocaleString("en-IN")}
-          sub="Geo-verified check-ins"
-          tone="neutral"
+          sub="geo-verified check-ins"
+          tone="butter"
+          emoji="⏱️"
         />
       </div>
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        <ChartFrame
-          title="Attendance trend"
-          description="Weekly share of marked children who were present."
-          rows={weekly}
-          columns={[
-            { key: "week", label: "Week of" },
-            { key: "rate", label: "Attendance %" },
-            { key: "marked", label: "Records" },
-          ]}
-        >
-          <TrendChart data={weekly} x="week" series={[{ key: "rate", label: "Attendance %" }]} area />
-        </ChartFrame>
+      {/* -------------------------------------------- plan + charts + rail */}
+      <div className="mt-5 grid gap-5 xl:grid-cols-[1fr_340px]">
+        <div className="space-y-5">
+          <div className="grid gap-5 lg:grid-cols-2">
+            <ChartFrame
+              title="Attendance trend"
+              description="Weekly share of marked children who were present."
+              rows={weekly}
+              columns={[
+                { key: "week", label: "Week of" },
+                { key: "rate", label: "Attendance %" },
+                { key: "marked", label: "Records" },
+              ]}
+            >
+              <TrendChart data={weekly} x="week" series={[{ key: "rate", label: "Attendance %" }]} area />
+            </ChartFrame>
 
-        <ChartFrame
-          title="Attendance by centre"
-          description="Last 30 days, highest first."
-          rows={centreBars}
-          columns={[
-            { key: "name", label: "Centre" },
-            { key: "rate", label: "Attendance %" },
-          ]}
-        >
-          <BarsChart data={centreBars} x="name" series={[{ key: "rate", label: "Attendance %" }]} unit="%" horizontal />
-        </ChartFrame>
-      </div>
+            <ChartFrame
+              title="Attendance by centre"
+              description="Last 30 days, strongest first."
+              rows={centreBars}
+              columns={[
+                { key: "name", label: "Centre" },
+                { key: "rate", label: "Attendance %" },
+              ]}
+            >
+              <BarsChart
+                data={centreBars}
+                x="name"
+                series={[{ key: "rate", label: "Attendance %" }]}
+                unit="%"
+                horizontal
+              />
+            </ChartFrame>
+          </div>
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingDown className="size-4 text-danger" />
-              Centres losing attendance
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {declining.length ? (
-              <Table>
-                <thead>
-                  <tr>
-                    <Th>Centre</Th>
-                    <Th>Previous 30d</Th>
-                    <Th>Last 30d</Th>
-                    <Th>Change</Th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {declining.map((c) => {
-                    const drop = (c.attendance_prev_30d ?? 0) - (c.attendance_30d ?? 0);
-                    return (
-                      <tr key={c.center_id}>
+          {/* Lesson plan track */}
+          <Card className="p-5">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="flex items-center gap-2 text-base font-bold">
+                  Lesson plan <span aria-hidden>📚</span>
+                </h3>
+                <p className="mt-0.5 text-xs text-muted">
+                  What this centre was scheduled to teach, and what actually happened.
+                </p>
+              </div>
+              <Link href="/curriculum">
+                <Button variant="outline" size="sm">
+                  Curriculum <ArrowRight />
+                </Button>
+              </Link>
+            </div>
+
+            {planItems.length ? (
+              <>
+                <div className="mb-4 flex items-center gap-3">
+                  <Meter value={(delivered / planItems.length) * 100} label="Lessons delivered" />
+                  <span className="tnum shrink-0 text-xs font-semibold text-muted">
+                    {delivered}/{planItems.length} delivered
+                  </span>
+                </div>
+                <PlanTrack items={planItems} />
+              </>
+            ) : (
+              <EmptyState
+                title="No lessons scheduled"
+                description="Schedule curriculum units to a centre and they will appear here."
+                emoji="📖"
+              />
+            )}
+          </Card>
+
+          {/* Volunteers */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <UsersRound className="size-4" /> Volunteers by service hours
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0 pb-2">
+              {topVolunteers.length ? (
+                <Table>
+                  <thead>
+                    <tr>
+                      <Th>Volunteer</Th>
+                      <Th>Centre</Th>
+                      <Th>Hours</Th>
+                      <Th>On site</Th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {topVolunteers.map((v) => (
+                      <tr key={v.volunteer_id}>
                         <Td>
-                          <Link href={`/centers/${c.center_id}`} className="font-medium hover:text-primary">
-                            {c.center_name}
+                          <Link href={`/volunteers/${v.volunteer_id}`} className="font-semibold hover:text-primary">
+                            {v.full_name}
                           </Link>
-                          <p className="text-xs text-muted">{c.zone_name}</p>
                         </Td>
-                        <Td className="tnum text-muted">{c.attendance_prev_30d}%</Td>
-                        <Td className="tnum font-medium">{c.attendance_30d}%</Td>
+                        <Td className="text-muted">{v.center_name ?? "—"}</Td>
                         <Td>
-                          <Badge tone={drop >= 15 ? "danger" : "warning"}>−{drop.toFixed(1)} pts</Badge>
+                          <MiniBar value={Number(v.total_hours)} max={maxHours} />
+                        </Td>
+                        <Td className="tnum text-muted">
+                          {v.shifts ? Math.round((v.verified_shifts / v.shifts) * 100) : 0}%
                         </Td>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </Table>
-            ) : (
-              <EmptyState title="No centre is slipping" description="Every centre held or improved its attendance against the previous month." />
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <UserMinus className="size-4 text-warning" />
-              Children who need attention
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {atRisk.length ? (
-              <Table>
-                <thead>
-                  <tr>
-                    <Th>Child</Th>
-                    <Th>Centre</Th>
-                    <Th>Attendance</Th>
-                    <Th>Avg score</Th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {atRisk.map((s) => (
-                    <tr key={s.student_id}>
-                      <Td>
-                        <Link href={`/students/${s.student_id}`} className="font-medium hover:text-primary">
-                          {s.full_name}
-                        </Link>
-                        <p className="text-xs text-muted">{LEVEL_LABELS[s.level] ?? s.level}</p>
-                      </Td>
-                      <Td className="text-muted">{s.center_name}</Td>
-                      <Td className="tnum">{s.attendance_rate ?? "—"}%</Td>
-                      <Td className="tnum">{s.avg_score ?? "—"}%</Td>
-                    </tr>
-                  ))}
-                </tbody>
-              </Table>
-            ) : (
-              <EmptyState title="Nobody is flagged" description="No child is below the attendance or score thresholds." />
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Volunteers by service hours</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {topVolunteers.length ? (
-              <Table>
-                <thead>
-                  <tr>
-                    <Th>Volunteer</Th>
-                    <Th>Centre</Th>
-                    <Th>Hours</Th>
-                    <Th>Verified</Th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {topVolunteers.map((v) => (
-                    <tr key={v.volunteer_id}>
-                      <Td>
-                        <Link href={`/volunteers/${v.volunteer_id}`} className="font-medium hover:text-primary">
-                          {v.full_name}
-                        </Link>
-                      </Td>
-                      <Td className="text-muted">{v.center_name ?? "—"}</Td>
-                      <Td>
-                        <MiniBar value={Number(v.total_hours)} max={maxHours} />
-                      </Td>
-                      <Td className="tnum text-muted">
-                        {v.shifts ? Math.round((v.verified_shifts / v.shifts) * 100) : 0}%
-                      </Td>
-                    </tr>
-                  ))}
-                </tbody>
-              </Table>
-            ) : (
-              <EmptyState title="No check-ins yet" />
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Centres short of volunteers</CardTitle>
-            <p className="text-xs text-muted">More than 12 children per volunteer.</p>
-          </CardHeader>
-          <CardContent>
-            {understaffed.length ? (
-              <Table>
-                <thead>
-                  <tr>
-                    <Th>Centre</Th>
-                    <Th>Children</Th>
-                    <Th>Volunteers</Th>
-                    <Th>Ratio</Th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {understaffed.map((c) => (
-                    <tr key={c.center_id}>
-                      <Td>
-                        <Link href={`/centers/${c.center_id}`} className="font-medium hover:text-primary">
-                          {c.center_name}
-                        </Link>
-                        <p className="text-xs text-muted">{c.zone_name}</p>
-                      </Td>
-                      <Td className="tnum">{c.students}</Td>
-                      <Td className="tnum">{c.volunteers}</Td>
-                      <Td>
-                        <Badge tone="warning">
-                          {Math.round(c.students / Math.max(1, c.volunteers))}:1
-                        </Badge>
-                      </Td>
-                    </tr>
-                  ))}
-                </tbody>
-              </Table>
-            ) : (
-              <EmptyState title="Staffing looks healthy" description="Every centre is within the target ratio." />
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card className="mt-4 bg-accent-soft/40 p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="font-medium">Have a question this dashboard does not answer?</p>
-            <p className="text-sm text-muted">
-              Ask UpayGPT in plain language. It writes the query, runs it, and shows you the SQL.
-            </p>
-          </div>
-          <Link href="/upaygpt">
-            <Button variant="outline">
-              Open UpayGPT <ArrowRight />
-            </Button>
-          </Link>
+                    ))}
+                  </tbody>
+                </Table>
+              ) : (
+                <div className="p-5">
+                  <EmptyState title="No check-ins yet" emoji="⏱️" />
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
-      </Card>
+
+        {/* ------------------------------------------------- attention rail */}
+        <aside className="space-y-4">
+          <h2 className="flex items-center gap-2 px-1 text-lg font-extrabold tracking-tight">
+            Needs you <span className="animate-float" aria-hidden>🔍</span>
+          </h2>
+
+          <div className="stagger space-y-3">
+            {declining.map((c) => {
+              const drop = (c.attendance_prev_30d ?? 0) - (c.attendance_30d ?? 0);
+              return (
+                <Link key={c.center_id} href={`/centers/${c.center_id}`} className="block">
+                  <div className="lift rounded-card bg-peach p-4 text-peach-ink shadow-[var(--shadow-card)]">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide">
+                        <TrendingDown className="size-3.5" /> Attendance falling
+                      </span>
+                      <span className="tnum text-xs font-bold">−{drop.toFixed(1)} pts</span>
+                    </div>
+                    <p className="mt-2 font-bold">{c.center_name}</p>
+                    <p className="mt-1 text-sm opacity-85">
+                      Down from {c.attendance_prev_30d}% to {c.attendance_30d}% against its own
+                      previous month.
+                    </p>
+                  </div>
+                </Link>
+              );
+            })}
+
+            {atRisk.length ? (
+              <div className="rounded-card bg-butter p-4 text-butter-ink shadow-[var(--shadow-card)]">
+                <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide">
+                  <UserMinus className="size-3.5" /> Children falling behind
+                </span>
+                <ul className="mt-2.5 space-y-1.5">
+                  {atRisk.map((s) => (
+                    <li key={s.student_id} className="flex items-center justify-between gap-2 text-sm">
+                      <Link href={`/students/${s.student_id}`} className="truncate font-semibold hover:underline">
+                        {s.full_name}
+                      </Link>
+                      <span className="tnum shrink-0 text-xs opacity-80">
+                        {s.attendance_rate ?? "—"}% · {LEVEL_LABELS[s.level] ?? s.level}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <Link href="/students" className="mt-3 inline-flex items-center gap-1 text-xs font-bold hover:underline">
+                  See every child <ArrowRight className="size-3.5" />
+                </Link>
+              </div>
+            ) : null}
+
+            {understaffed.map((c) => (
+              <Link key={c.center_id} href={`/centers/${c.center_id}`} className="block">
+                <div className="lift rounded-card bg-sky p-4 text-sky-ink shadow-[var(--shadow-card)]">
+                  <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide">
+                    <UsersRound className="size-3.5" /> Short of volunteers
+                  </span>
+                  <p className="mt-2 font-bold">{c.center_name}</p>
+                  <p className="mt-1 text-sm opacity-85">
+                    {c.students} children to {c.volunteers} volunteer{c.volunteers === 1 ? "" : "s"} —
+                    about {Math.round(c.students / Math.max(1, c.volunteers))} to one.
+                  </p>
+                </div>
+              </Link>
+            ))}
+
+            {!declining.length && !atRisk.length && !understaffed.length ? (
+              <EmptyState
+                title="Nothing is flagged"
+                description="No centre is slipping, no child is below threshold, and staffing is within target."
+                emoji="🎉"
+              />
+            ) : null}
+          </div>
+
+          <Link href="/upaygpt" className="block">
+            <div className="lift rounded-card bg-lilac p-4 text-lilac-ink shadow-[var(--shadow-card)]">
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide">
+                <Sparkles className="size-3.5" /> UpayGPT
+              </span>
+              <p className="mt-2 text-sm">
+                Ask anything this page does not answer. It writes the query, runs it, and shows you
+                the SQL.
+              </p>
+              <Badge tone="lilac" className="mt-3 bg-white/60 dark:bg-white/10">
+                &ldquo;Which centres need volunteers?&rdquo;
+              </Badge>
+            </div>
+          </Link>
+        </aside>
+      </div>
     </>
   );
 }

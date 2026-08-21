@@ -109,7 +109,7 @@ export function UpayGptChat() {
           }}
           rows={2}
           placeholder="Which centres need more volunteers?"
-          className="min-h-[46px] flex-1 resize-none rounded-[--radius-base] border border-border bg-surface px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+          className="min-h-[46px] flex-1 resize-none rounded-base border border-border bg-surface px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
         />
         <Button type="submit" disabled={pending || !question.trim()} className="h-[46px]">
           {pending ? <Loader2 className="animate-spin" /> : <CornerDownLeft />}
@@ -127,7 +127,7 @@ function Exchange({ result }: { result: AskResult }) {
   return (
     <div className="animate-in space-y-2">
       <div className="flex justify-end">
-        <p className="max-w-[80%] rounded-[--radius-base] bg-primary-soft px-3.5 py-2 text-sm text-primary">
+        <p className="max-w-[80%] rounded-base bg-primary-soft px-3.5 py-2 text-sm text-primary">
           {result.question}
         </p>
       </div>
@@ -171,13 +171,13 @@ function Exchange({ result }: { result: AskResult }) {
             </div>
 
             {showSql && result.sql ? (
-              <pre className="mt-3 overflow-x-auto rounded-[--radius-base] bg-surface-2 p-3 text-xs leading-relaxed">
+              <pre className="mt-3 overflow-x-auto rounded-base bg-surface-2 p-3 text-xs leading-relaxed">
                 <code>{result.sql}</code>
               </pre>
             ) : null}
 
             {showRows && result.rows?.length ? (
-              <div className="mt-3 max-h-[320px] overflow-auto rounded-[--radius-base] border border-border">
+              <div className="mt-3 max-h-[320px] overflow-auto rounded-base border border-border">
                 <Table>
                   <thead>
                     <tr>
@@ -217,7 +217,7 @@ function Exchange({ result }: { result: AskResult }) {
                 </p>
               ) : null}
               {result.sql ? (
-                <pre className="mt-2 overflow-x-auto rounded-[--radius-base] bg-surface-2 p-3 text-xs">
+                <pre className="mt-2 overflow-x-auto rounded-base bg-surface-2 p-3 text-xs">
                   <code>{result.sql}</code>
                 </pre>
               ) : null}

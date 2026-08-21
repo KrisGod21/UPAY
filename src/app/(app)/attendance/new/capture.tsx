@@ -334,7 +334,7 @@ export function AttendanceCapture({
 
             <div
               className={cn(
-                "flex items-start gap-2 rounded-[--radius-base] px-3 py-2 text-xs",
+                "flex items-start gap-2 rounded-base px-3 py-2 text-xs",
                 position == null
                   ? "bg-surface-2 text-muted"
                   : onSite
@@ -366,7 +366,7 @@ export function AttendanceCapture({
           <CardContent className="space-y-3">
             <label
               className={cn(
-                "flex cursor-pointer flex-col items-center gap-2 rounded-[--radius-base] border border-dashed border-border px-4 py-8 text-center transition-colors hover:border-primary hover:bg-primary-soft",
+                "flex cursor-pointer flex-col items-center gap-2 rounded-base border border-dashed border-border px-4 py-8 text-center transition-colors hover:border-primary hover:bg-primary-soft",
                 phase === "working" && "pointer-events-none opacity-60",
               )}
             >
@@ -396,13 +396,13 @@ export function AttendanceCapture({
             ) : null}
 
             {error ? (
-              <p className="flex items-start gap-2 rounded-[--radius-base] bg-danger-soft px-3 py-2 text-sm text-danger">
+              <p className="flex items-start gap-2 rounded-base bg-danger-soft px-3 py-2 text-sm text-danger">
                 <TriangleAlert className="mt-0.5 size-4 shrink-0" />
                 {error}
               </p>
             ) : null}
 
-            <p className="flex items-start gap-2 rounded-[--radius-base] bg-accent-soft px-3 py-2 text-xs text-accent">
+            <p className="flex items-start gap-2 rounded-base bg-accent-soft px-3 py-2 text-xs text-accent">
               <ShieldCheck className="mt-0.5 size-3.5 shrink-0" />
               Recognition runs on this device. The photograph is never uploaded and never stored —
               only the roster result is saved.
@@ -413,7 +413,7 @@ export function AttendanceCapture({
         {phase === "review" ? (
           <Card>
             <CardContent className="p-5">
-              <canvas ref={canvasRef} className="w-full rounded-[--radius-base] border border-border" />
+              <canvas ref={canvasRef} className="w-full rounded-base border border-border" />
               <p className="mt-2 text-xs text-muted">
                 {faces.length} face{faces.length === 1 ? "" : "s"} detected · {recognised} matched
                 automatically
@@ -440,12 +440,12 @@ export function AttendanceCapture({
             <CardContent>
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {unassignedFaces.map((f) => (
-                  <div key={f.index} className="rounded-[--radius-base] border border-border p-2">
+                  <div key={f.index} className="rounded-base border border-border p-2">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={f.thumbnail}
                       alt={`Unmatched face ${f.index + 1}`}
-                      className="mb-2 aspect-square w-full rounded-[--radius-base] object-cover"
+                      className="mb-2 aspect-square w-full rounded-base object-cover"
                     />
                     <Select
                       value={assignments[f.index] ?? ""}

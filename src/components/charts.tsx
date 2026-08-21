@@ -54,7 +54,7 @@ function ChartTooltip({
 }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-[--radius-base] border border-border bg-surface px-3 py-2 text-xs shadow-lg">
+    <div className="rounded-base border border-border bg-surface px-3 py-2 text-xs shadow-lg">
       {label !== undefined ? <p className="mb-1 font-medium text-foreground">{label}</p> : null}
       {payload.map((p, i) => (
         <p key={i} className="flex items-center gap-2 text-muted">

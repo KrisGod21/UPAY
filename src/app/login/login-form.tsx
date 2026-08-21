@@ -7,10 +7,10 @@ import { signIn, type LoginState } from "./actions";
 import { Button, Field, Input } from "@/components/ui";
 
 const DEMO_ACCOUNTS = [
-  { role: "Administrator", email: "admin@upay.org", blurb: "Sees every zone and centre" },
-  { role: "Coordinator", email: "coordinator@upay.org", blurb: "Scoped to Nagpur Central" },
-  { role: "Teacher", email: "teacher@upay.org", blurb: "Curriculum and progress" },
-  { role: "Volunteer", email: "volunteer@upay.org", blurb: "Attendance and check-in" },
+  { role: "Administrator", email: "admin@upay.org", blurb: "Every zone and centre", emoji: "🗺", tone: "bg-sky text-sky-ink" },
+  { role: "Coordinator", email: "coordinator@upay.org", blurb: "Scoped to Nagpur Central", emoji: "🧭", tone: "bg-lilac text-lilac-ink" },
+  { role: "Teacher", email: "teacher@upay.org", blurb: "Curriculum and progress", emoji: "📚", tone: "bg-butter text-butter-ink" },
+  { role: "Volunteer", email: "volunteer@upay.org", blurb: "Attendance and check-in", emoji: "🤝", tone: "bg-mint text-mint-ink" },
 ];
 
 function SubmitButton() {
@@ -56,7 +56,7 @@ export function LoginForm({ next, demoPassword }: { next: string; demoPassword: 
         </Field>
 
         {state.error ? (
-          <p className="flex items-start gap-2 rounded-[--radius-base] bg-danger-soft px-3 py-2 text-sm text-danger">
+          <p className="flex items-start gap-2 rounded-base bg-danger-soft px-3 py-2 text-sm text-danger">
             <AlertCircle className="mt-0.5 size-4 shrink-0" />
             {state.error}
           </p>
@@ -67,9 +67,9 @@ export function LoginForm({ next, demoPassword }: { next: string; demoPassword: 
 
       <div>
         <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted">
-          Demo accounts — click to fill
+          Demo accounts — tap to fill
         </p>
-        <div className="grid gap-2">
+        <div className="grid gap-2 sm:grid-cols-2">
           {DEMO_ACCOUNTS.map((a) => (
             <button
               key={a.email}
@@ -78,13 +78,15 @@ export function LoginForm({ next, demoPassword }: { next: string; demoPassword: 
                 setEmail(a.email);
                 setPassword(demoPassword);
               }}
-              className="flex items-center justify-between rounded-[--radius-base] border border-border bg-surface px-3 py-2 text-left text-sm transition-colors hover:border-primary hover:bg-primary-soft"
+              className={`press flex items-center gap-3 rounded-card p-3 text-left transition-transform hover:-translate-y-0.5 ${a.tone}`}
             >
-              <span>
-                <span className="font-medium">{a.role}</span>
-                <span className="ml-2 text-xs text-muted">{a.blurb}</span>
+              <span className="grid size-9 shrink-0 place-items-center rounded-full bg-white/60 text-sm dark:bg-white/10" aria-hidden>
+                {a.emoji}
               </span>
-              <span className="text-xs text-muted">{a.email}</span>
+              <span className="min-w-0">
+                <span className="block text-sm font-bold">{a.role}</span>
+                <span className="block truncate text-xs opacity-80">{a.blurb}</span>
+              </span>
             </button>
           ))}
         </div>

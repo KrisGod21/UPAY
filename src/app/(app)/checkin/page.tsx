@@ -65,13 +65,14 @@ export default async function CheckinPage() {
 
         <div className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-3">
-            <Stat label="Recent hours" value={totalHours.toFixed(1)} sub="Last 20 shifts" tone="primary" />
-            <Stat label="Shifts logged" value={shifts.length} tone="accent" />
+            <Stat label="Recent hours" value={totalHours.toFixed(1)} sub="Last 20 shifts" tone="sky" emoji="⏱" />
+            <Stat label="Shifts logged" value={shifts.length} tone="lilac" emoji="📝" />
             <Stat
               label="Geo-verified"
               value={shifts.length ? `${Math.round((verified / shifts.length) * 100)}%` : "—"}
               sub="Within the centre radius"
-              tone="success"
+              tone="mint"
+              emoji="📍"
             />
           </div>
 

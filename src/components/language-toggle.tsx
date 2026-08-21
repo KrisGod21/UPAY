@@ -1,15 +1,20 @@
 "use client";
 
-import { Languages } from "lucide-react";
 import { useLang } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
-export function LanguageToggle() {
+export function LanguageToggle({ onDark = true }: { onDark?: boolean }) {
   const { lang, setLang } = useLang();
 
   return (
-    <div className="inline-flex items-center gap-1 rounded-full border border-border bg-surface p-0.5">
-      <Languages className="ml-1.5 size-3.5 text-muted" />
+    <div
+      className={cn(
+        "inline-flex items-center gap-0.5 rounded-full p-0.5",
+        onDark ? "bg-white/10" : "bg-surface-2",
+      )}
+      role="group"
+      aria-label="Language"
+    >
       {(["en", "hi"] as const).map((l) => (
         <button
           key={l}
@@ -17,8 +22,12 @@ export function LanguageToggle() {
           onClick={() => setLang(l)}
           aria-pressed={lang === l}
           className={cn(
-            "rounded-full px-2.5 py-1 text-xs font-medium transition-colors",
-            lang === l ? "bg-primary text-primary-fg" : "text-muted hover:text-foreground",
+            "press rounded-full px-2.5 py-1.5 text-xs font-semibold transition-colors",
+            lang === l
+              ? "bg-primary text-primary-fg"
+              : onDark
+                ? "text-nav-muted hover:text-nav-fg"
+                : "text-muted hover:text-foreground",
           )}
         >
           {l === "en" ? "EN" : "हिं"}

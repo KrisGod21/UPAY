@@ -2,30 +2,58 @@
 
 /*
   UPAY Footpathshala design tokens.
-  Warm saffron for action, deep teal for structure — the palette reads as an
-  Indian education programme rather than a generic SaaS dashboard.
+
+  Soft, rounded and warm — the product is used by volunteers on a footpath, and
+  it should feel like somewhere a child's progress is celebrated rather than a
+  compliance system. Pastel surfaces carry meaning (mint = done, lilac = live,
+  amber = coming up), and every one of them holds dark ink for contrast.
 */
 :root {
-  --background: #f7f7f5;
+  --page: #e6f4f8;
+  --background: #f7f8f6;
   --surface: #ffffff;
-  --surface-2: #f1f0ec;
-  --border: #e3e1da;
-  --foreground: #1c1a17;
-  --muted: #6b6760;
+  --surface-2: #f2f3f0;
+  --border: #e6e7e2;
+  --foreground: #12130f;
+  --muted: #6a6d63;
+  --nav: #0d0e0c;
+  --nav-fg: #f7f8f6;
+  --nav-muted: #9b9d95;
+
   --primary: #d95a1e;
   --primary-hover: #bf4a13;
   --primary-fg: #ffffff;
-  --primary-soft: #fdf0e7;
+  --primary-soft: #fde8da;
+
   --accent: #0f5f5c;
-  --accent-soft: #e4f2f1;
-  --success: #2f7d4f;
-  --success-soft: #e6f4ec;
-  --warning: #a86b00;
-  --warning-soft: #fdf3e0;
+  --accent-soft: #d7f0ee;
+
+  --success: #1f7a4d;
+  --success-soft: #d6f5e3;
+  --warning: #8a6300;
+  --warning-soft: #fdefcd;
   --danger: #b3261e;
-  --danger-soft: #fdeceb;
+  --danger-soft: #fde0dd;
+
+  /* Playful surfaces used for cards and tiles. */
+  --mint: #d6f5e3;
+  --mint-ink: #15613c;
+  --lilac: #ecdffb;
+  --lilac-ink: #5b3495;
+  --pink: #fadcf3;
+  --pink-ink: #93307a;
+  --sky: #d8ecfb;
+  --sky-ink: #14568c;
+  --butter: #fdefcd;
+  --butter-ink: #7d5900;
+  --peach: #ffe3d2;
+  --peach-ink: #9b4715;
+
   --ring: #d95a1e;
-  --radius: 0.65rem;
+  --radius: 1.15rem;
+  --radius-lg: 1.75rem;
+  --radius-xl: 2.25rem;
+
   /* Chart series. Validated categorical order — CVD-safe on adjacent pairs.
      Assigned in fixed slot order, never cycled. */
   --series-1: #2a78d6;
@@ -36,30 +64,55 @@
   --series-6: #008300;
   --series-7: #4a3aa7;
   --series-8: #e34948;
-  --grid: #e3e1da;
+  --grid: #e6e7e2;
+
+  --shadow-card: 0 1px 2px rgba(18, 19, 15, 0.04), 0 8px 24px -12px rgba(18, 19, 15, 0.12);
+  --shadow-lift: 0 2px 4px rgba(18, 19, 15, 0.05), 0 18px 40px -18px rgba(18, 19, 15, 0.22);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --background: #16150f;
-    --surface: #1f1e18;
-    --surface-2: #272620;
-    --border: #38362d;
-    --foreground: #f2f0e9;
-    --muted: #a3a094;
+    --page: #0a0f11;
+    --background: #14161a;
+    --surface: #1d2025;
+    --surface-2: #262a30;
+    --border: #333840;
+    --foreground: #f1f2ee;
+    --muted: #9ba0a8;
+    --nav: #04060a;
+    --nav-fg: #f1f2ee;
+    --nav-muted: #8a8f97;
+
     --primary: #f07a3d;
     --primary-hover: #ff8f56;
     --primary-fg: #1a1005;
-    --primary-soft: #34210f;
+    --primary-soft: #3a2312;
+
     --accent: #4fb3ae;
-    --accent-soft: #10302f;
+    --accent-soft: #10312f;
+
     --success: #66c68c;
-    --success-soft: #14301f;
+    --success-soft: #12331f;
     --warning: #e0a54a;
-    --warning-soft: #33260f;
+    --warning-soft: #34270f;
     --danger: #f08379;
-    --danger-soft: #351815;
+    --danger-soft: #371815;
+
+    --mint: #16341f;
+    --mint-ink: #8ce0ad;
+    --lilac: #251a3c;
+    --lilac-ink: #c3a9f2;
+    --pink: #351427;
+    --pink-ink: #f0a3d4;
+    --sky: #10263c;
+    --sky-ink: #94c8f2;
+    --butter: #33280d;
+    --butter-ink: #eccb7a;
+    --peach: #3a2013;
+    --peach-ink: #f5b189;
+
     --ring: #f07a3d;
+
     --series-1: #3987e5;
     --series-2: #d95926;
     --series-3: #199e70;
@@ -68,11 +121,55 @@
     --series-6: #008300;
     --series-7: #9085e9;
     --series-8: #e66767;
-    --grid: #38362d;
+    --grid: #333840;
+
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 28px -14px rgba(0, 0, 0, 0.7);
+    --shadow-lift: 0 2px 6px rgba(0, 0, 0, 0.45), 0 20px 44px -18px rgba(0, 0, 0, 0.8);
   }
 }
 
 :root[data-theme="dark"] {
+  --page: #0a0f11;
+  --background: #14161a;
+  --surface: #1d2025;
+  --surface-2: #262a30;
+  --border: #333840;
+  --foreground: #f1f2ee;
+  --muted: #9ba0a8;
+  --nav: #04060a;
+  --nav-fg: #f1f2ee;
+  --nav-muted: #8a8f97;
+
+  --primary: #f07a3d;
+  --primary-hover: #ff8f56;
+  --primary-fg: #1a1005;
+  --primary-soft: #3a2312;
+
+  --accent: #4fb3ae;
+  --accent-soft: #10312f;
+
+  --success: #66c68c;
+  --success-soft: #12331f;
+  --warning: #e0a54a;
+  --warning-soft: #34270f;
+  --danger: #f08379;
+  --danger-soft: #371815;
+
+  --mint: #16341f;
+  --mint-ink: #8ce0ad;
+  --lilac: #251a3c;
+  --lilac-ink: #c3a9f2;
+  --pink: #351427;
+  --pink-ink: #f0a3d4;
+  --sky: #10263c;
+  --sky-ink: #94c8f2;
+  --butter: #33280d;
+  --butter-ink: #eccb7a;
+  --peach: #3a2013;
+  --peach-ink: #f5b189;
+
+  --ring: #f07a3d;
+
   --series-1: #3987e5;
   --series-2: #d95926;
   --series-3: #199e70;
@@ -81,36 +178,24 @@
   --series-6: #008300;
   --series-7: #9085e9;
   --series-8: #e66767;
-  --grid: #38362d;
+  --grid: #333840;
 
-  --background: #16150f;
-  --surface: #1f1e18;
-  --surface-2: #272620;
-  --border: #38362d;
-  --foreground: #f2f0e9;
-  --muted: #a3a094;
-  --primary: #f07a3d;
-  --primary-hover: #ff8f56;
-  --primary-fg: #1a1005;
-  --primary-soft: #34210f;
-  --accent: #4fb3ae;
-  --accent-soft: #10302f;
-  --success: #66c68c;
-  --success-soft: #14301f;
-  --warning: #e0a54a;
-  --warning-soft: #33260f;
-  --danger: #f08379;
-  --danger-soft: #351815;
-  --ring: #f07a3d;
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 28px -14px rgba(0, 0, 0, 0.7);
+  --shadow-lift: 0 2px 6px rgba(0, 0, 0, 0.45), 0 20px 44px -18px rgba(0, 0, 0, 0.8);
 }
 
 @theme inline {
+  --color-page: var(--page);
   --color-background: var(--background);
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
   --color-border: var(--border);
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
+  --color-nav: var(--nav);
+  --color-nav-fg: var(--nav-fg);
+  --color-nav-muted: var(--nav-muted);
+
   --color-primary: var(--primary);
   --color-primary-hover: var(--primary-hover);
   --color-primary-fg: var(--primary-fg);
@@ -123,8 +208,24 @@
   --color-warning-soft: var(--warning-soft);
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
+
+  --color-mint: var(--mint);
+  --color-mint-ink: var(--mint-ink);
+  --color-lilac: var(--lilac);
+  --color-lilac-ink: var(--lilac-ink);
+  --color-pink: var(--pink);
+  --color-pink-ink: var(--pink-ink);
+  --color-sky: var(--sky);
+  --color-sky-ink: var(--sky-ink);
+  --color-butter: var(--butter);
+  --color-butter-ink: var(--butter-ink);
+  --color-peach: var(--peach);
+  --color-peach-ink: var(--peach-ink);
+
   --color-ring: var(--ring);
   --radius-base: var(--radius);
+  --radius-card: var(--radius-lg);
+  --radius-panel: var(--radius-xl);
   --font-sans: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
 }
 
@@ -132,14 +233,17 @@
   border-color: var(--border);
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
-  background: var(--background);
+  background: var(--page);
   color: var(--foreground);
   font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
-/* Numeric columns line up when digits are tabular. */
 .tnum {
   font-variant-numeric: tabular-nums;
 }
@@ -156,28 +260,129 @@ body {
   background: transparent;
 }
 
-@keyframes fade-up {
+/* ------------------------------------------------------------- animation */
+
+@keyframes rise {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(14px);
   }
   to {
     opacity: 1;
     transform: none;
   }
 }
-.animate-in {
-  animation: fade-up 0.28s ease-out both;
-}
 
-@media (prefers-reduced-motion: reduce) {
-  .animate-in {
-    animation: none;
+@keyframes pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  60% {
+    transform: scale(1.015);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
   }
 }
 
-/* Leaflet renders its own panes; keep them below app chrome. */
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes draw {
+  from {
+    stroke-dashoffset: var(--dash, 400);
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.animate-in {
+  animation: rise 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.animate-pop {
+  animation: pop 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.animate-float {
+  animation: float 5s ease-in-out infinite;
+}
+
+/* Stagger children without writing a delay for each one by hand. */
+.stagger > * {
+  animation: rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.stagger > *:nth-child(1) { animation-delay: 0.03s; }
+.stagger > *:nth-child(2) { animation-delay: 0.08s; }
+.stagger > *:nth-child(3) { animation-delay: 0.13s; }
+.stagger > *:nth-child(4) { animation-delay: 0.18s; }
+.stagger > *:nth-child(5) { animation-delay: 0.23s; }
+.stagger > *:nth-child(6) { animation-delay: 0.28s; }
+.stagger > *:nth-child(7) { animation-delay: 0.33s; }
+.stagger > *:nth-child(8) { animation-delay: 0.38s; }
+.stagger > *:nth-child(n + 9) { animation-delay: 0.42s; }
+
+/* Cards lift towards the pointer. Transform only, so it stays on the compositor. */
+.lift {
+  transition:
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.lift:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lift);
+}
+
+.press {
+  transition: transform 0.12s ease;
+}
+.press:active {
+  transform: scale(0.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .animate-in,
+  .animate-pop,
+  .animate-float,
+  .stagger > * {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+  .lift:hover {
+    transform: none;
+  }
+}
+
+/* Dotted connectors between plan cards, as on a route map. */
+.connector {
+  stroke: var(--border);
+  stroke-width: 2;
+  stroke-dasharray: 4 6;
+  fill: none;
+}
+
 .leaflet-container {
   z-index: 0;
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg);
 }

@@ -126,7 +126,7 @@ export function CheckinPanel({
 
         <div
           className={cn(
-            "flex items-start gap-2 rounded-[--radius-base] px-3 py-2.5 text-sm",
+            "flex items-start gap-2 rounded-base px-3 py-2.5 text-sm",
             locating
               ? "bg-surface-2 text-muted"
               : position == null
@@ -155,7 +155,7 @@ export function CheckinPanel({
         </div>
 
         {error ? (
-          <p className="flex items-start gap-2 rounded-[--radius-base] bg-danger-soft px-3 py-2 text-sm text-danger">
+          <p className="flex items-start gap-2 rounded-base bg-danger-soft px-3 py-2 text-sm text-danger">
             <TriangleAlert className="mt-0.5 size-4 shrink-0" />
             {error}
           </p>
