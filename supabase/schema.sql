@@ -452,3 +452,102 @@ $$;
 
 revoke all on function public.upaygpt_query(text) from public;
 grant execute on function public.upaygpt_query(text) to authenticated;
+
+-- ---------------------------------------------------------- analytics views
+-- security_invoker keeps the caller's RLS in force; without it a view runs as
+-- its owner and would quietly hand a coordinator the whole country.
+
+create or replace view public.v_attendance_daily
+with (security_invoker = true) as
+select
+  cs.session_date,
+  cs.center_id,
+  c.name  as center_name,
+  c.zone_id,
+  count(*)                                    as marked,
+  count(*) filter (where a.status <> 'absent') as present,
+  round(
+    100.0 * count(*) filter (where a.status <> 'absent') / nullif(count(*), 0), 1
+  ) as attendance_rate
+from public.attendance a
+join public.class_sessions cs on cs.id = a.session_id
+join public.centers c on c.id = cs.center_id
+group by cs.session_date, cs.center_id, c.name, c.zone_id;
+
+create or replace view public.v_center_stats
+with (security_invoker = true) as
+select
+  c.id   as center_id,
+  c.name as center_name,
+  c.code,
+  c.zone_id,
+  z.name as zone_name,
+  c.lat,
+  c.lng,
+  c.active,
+  (select count(*) from public.students s where s.center_id = c.id and s.active) as students,
+  (select count(*) from public.profiles p
+     where p.center_id = c.id and p.role in ('volunteer', 'teacher') and p.active) as volunteers,
+  (select count(*) from public.class_sessions cs
+     where cs.center_id = c.id and cs.session_date >= current_date - 30) as sessions_30d,
+  (select round(100.0 * count(*) filter (where a.status <> 'absent') / nullif(count(*), 0), 1)
+     from public.attendance a
+     join public.class_sessions cs on cs.id = a.session_id
+     where cs.center_id = c.id and cs.session_date >= current_date - 30) as attendance_30d,
+  (select round(100.0 * count(*) filter (where a.status <> 'absent') / nullif(count(*), 0), 1)
+     from public.attendance a
+     join public.class_sessions cs on cs.id = a.session_id
+     where cs.center_id = c.id
+       and cs.session_date >= current_date - 60
+       and cs.session_date <  current_date - 30) as attendance_prev_30d,
+  (select round(avg(r.percentage), 1)
+     from public.assessment_results r
+     join public.students s on s.id = r.student_id
+     where s.center_id = c.id) as avg_score
+from public.centers c
+join public.zones z on z.id = c.zone_id;
+
+create or replace view public.v_student_progress
+with (security_invoker = true) as
+select
+  s.id as student_id,
+  s.full_name,
+  s.student_code,
+  s.level,
+  s.center_id,
+  c.name as center_name,
+  c.zone_id,
+  (select round(100.0 * count(*) filter (where a.status <> 'absent') / nullif(count(*), 0), 1)
+     from public.attendance a where a.student_id = s.id) as attendance_rate,
+  (select round(avg(r.percentage), 1)
+     from public.assessment_results r where r.student_id = s.id) as avg_score,
+  (select count(*) from public.assessment_results r where r.student_id = s.id) as assessments_taken
+from public.students s
+join public.centers c on c.id = s.center_id
+where s.active;
+
+create or replace view public.v_volunteer_stats
+with (security_invoker = true) as
+select
+  p.id as volunteer_id,
+  p.full_name,
+  p.email,
+  p.role,
+  p.center_id,
+  c.name as center_name,
+  c.zone_id,
+  p.joined_on,
+  coalesce(sum(v.hours), 0)                                as total_hours,
+  count(v.id)                                              as shifts,
+  count(v.id) filter (where v.location_verified)           as verified_shifts,
+  max(v.check_in_at)                                       as last_seen,
+  (select count(*) from public.class_sessions cs where cs.conducted_by = p.id) as sessions_led
+from public.profiles p
+left join public.volunteer_checkins v on v.volunteer_id = p.id
+left join public.centers c on c.id = p.center_id
+where p.role in ('volunteer', 'teacher')
+group by p.id, p.full_name, p.email, p.role, p.center_id, c.name, c.zone_id, p.joined_on;
+
+grant select on public.v_attendance_daily, public.v_center_stats,
+                public.v_student_progress, public.v_volunteer_stats
+  to authenticated;

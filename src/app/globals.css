@@ -26,6 +26,17 @@
   --danger-soft: #fdeceb;
   --ring: #d95a1e;
   --radius: 0.65rem;
+  /* Chart series. Validated categorical order — CVD-safe on adjacent pairs.
+     Assigned in fixed slot order, never cycled. */
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-4: #eda100;
+  --series-5: #e87ba4;
+  --series-6: #008300;
+  --series-7: #4a3aa7;
+  --series-8: #e34948;
+  --grid: #e3e1da;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -49,10 +60,29 @@
     --danger: #f08379;
     --danger-soft: #351815;
     --ring: #f07a3d;
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --series-4: #c98500;
+    --series-5: #d55181;
+    --series-6: #008300;
+    --series-7: #9085e9;
+    --series-8: #e66767;
+    --grid: #38362d;
   }
 }
 
 :root[data-theme="dark"] {
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --series-4: #c98500;
+  --series-5: #d55181;
+  --series-6: #008300;
+  --series-7: #9085e9;
+  --series-8: #e66767;
+  --grid: #38362d;
+
   --background: #16150f;
   --surface: #1f1e18;
   --surface-2: #272620;
