@@ -1,26 +1,153 @@
 @import "tailwindcss";
 
+/*
+  UPAY Footpathshala design tokens.
+  Warm saffron for action, deep teal for structure — the palette reads as an
+  Indian education programme rather than a generic SaaS dashboard.
+*/
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f7f7f5;
+  --surface: #ffffff;
+  --surface-2: #f1f0ec;
+  --border: #e3e1da;
+  --foreground: #1c1a17;
+  --muted: #6b6760;
+  --primary: #d95a1e;
+  --primary-hover: #bf4a13;
+  --primary-fg: #ffffff;
+  --primary-soft: #fdf0e7;
+  --accent: #0f5f5c;
+  --accent-soft: #e4f2f1;
+  --success: #2f7d4f;
+  --success-soft: #e6f4ec;
+  --warning: #a86b00;
+  --warning-soft: #fdf3e0;
+  --danger: #b3261e;
+  --danger-soft: #fdeceb;
+  --ring: #d95a1e;
+  --radius: 0.65rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --background: #16150f;
+    --surface: #1f1e18;
+    --surface-2: #272620;
+    --border: #38362d;
+    --foreground: #f2f0e9;
+    --muted: #a3a094;
+    --primary: #f07a3d;
+    --primary-hover: #ff8f56;
+    --primary-fg: #1a1005;
+    --primary-soft: #34210f;
+    --accent: #4fb3ae;
+    --accent-soft: #10302f;
+    --success: #66c68c;
+    --success-soft: #14301f;
+    --warning: #e0a54a;
+    --warning-soft: #33260f;
+    --danger: #f08379;
+    --danger-soft: #351815;
+    --ring: #f07a3d;
+  }
+}
+
+:root[data-theme="dark"] {
+  --background: #16150f;
+  --surface: #1f1e18;
+  --surface-2: #272620;
+  --border: #38362d;
+  --foreground: #f2f0e9;
+  --muted: #a3a094;
+  --primary: #f07a3d;
+  --primary-hover: #ff8f56;
+  --primary-fg: #1a1005;
+  --primary-soft: #34210f;
+  --accent: #4fb3ae;
+  --accent-soft: #10302f;
+  --success: #66c68c;
+  --success-soft: #14301f;
+  --warning: #e0a54a;
+  --warning-soft: #33260f;
+  --danger: #f08379;
+  --danger-soft: #351815;
+  --ring: #f07a3d;
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-muted: var(--muted);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-fg: var(--primary-fg);
+  --color-primary-soft: var(--primary-soft);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-ring: var(--ring);
+  --radius-base: var(--radius);
+  --font-sans: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  border-color: var(--border);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Numeric columns line up when digits are tabular. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.animate-in {
+  animation: fade-up 0.28s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-in {
+    animation: none;
+  }
+}
+
+/* Leaflet renders its own panes; keep them below app chrome. */
+.leaflet-container {
+  z-index: 0;
+  border-radius: var(--radius);
 }

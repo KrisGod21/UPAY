@@ -1,69 +1,175 @@
-import Image from "next/image";
+import Link from "next/link";
+import {
+  ScanFace,
+  MapPin,
+  Sparkles,
+  BookOpen,
+  BarChart3,
+  Award,
+  ArrowRight,
+  ShieldCheck,
+} from "lucide-react";
+import { Button, Card } from "@/components/ui";
+
+const features = [
+  {
+    icon: ScanFace,
+    title: "Attendance from one class photo",
+    body: "Faces are matched in the browser against the centre roster. The photograph never leaves the device and is never stored — only a 128-number embedding is kept.",
+  },
+  {
+    icon: MapPin,
+    title: "Geo-verified volunteer check-in",
+    body: "Check-ins are validated against the centre's coordinates, so service hours reflect where a volunteer actually was.",
+  },
+  {
+    icon: Sparkles,
+    title: "AI assessments, human verified",
+    body: "Papers are generated for a child's learning level, answer sheets are read by vision OCR, and nothing reaches a record until a volunteer confirms it.",
+  },
+  {
+    icon: BookOpen,
+    title: "Curriculum that reaches every centre",
+    body: "Build units once, schedule them across centres, and see which lessons were actually delivered.",
+  },
+  {
+    icon: BarChart3,
+    title: "Analytics that name the problem",
+    body: "Not just totals. Which centre is slipping, which children are falling behind, which centres are short of volunteers.",
+  },
+  {
+    icon: Award,
+    title: "Certificates issued automatically",
+    body: "Service hours accumulate and eligible volunteers receive a serial-numbered certificate without anyone chasing a spreadsheet.",
+  },
+];
 
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <main className="min-h-screen">
+      <header className="border-b border-border">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4">
+          <div className="flex items-center gap-2.5">
+            <span className="grid h-9 w-9 place-items-center rounded-[--radius-base] bg-primary text-sm font-bold text-primary-fg">
+              U
+            </span>
+            <div className="leading-tight">
+              <p className="text-sm font-semibold">UPAY</p>
+              <p className="text-xs text-muted">Footpathshala</p>
+            </div>
+          </div>
+          <Link href="/login">
+            <Button size="sm">Sign in</Button>
+          </Link>
+        </div>
+      </header>
+
+      <section className="mx-auto max-w-6xl px-5 py-16 sm:py-24">
+        <div className="max-w-3xl animate-in">
+          <p className="mb-4 inline-flex items-center gap-2 rounded-full bg-primary-soft px-3 py-1 text-xs font-medium text-primary">
+            <ShieldCheck className="size-3.5" />
+            Turning footpaths into schools
           </p>
+          <h1 className="text-4xl font-semibold leading-[1.1] tracking-tight sm:text-6xl">
+            1,600 hours a month went into paperwork.
+            <br />
+            <span className="text-primary">They should have gone into teaching.</span>
+          </h1>
+          <p className="mt-6 max-w-2xl text-lg text-muted">
+            Footpathshala runs across zones, centres, volunteers and hundreds of children — on
+            spreadsheets that do not talk to each other. This platform replaces that with one system
+            that records what happens, and then answers questions about it in plain language.
+          </p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Link href="/login">
+              <Button size="lg">
+                Open the platform <ArrowRight />
+              </Button>
+            </Link>
+            <Link href="/login">
+              <Button size="lg" variant="outline">
+                View the demo accounts
+              </Button>
+            </Link>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        <dl className="mt-16 grid gap-4 sm:grid-cols-3">
+          {[
+            ["1,600+", "staff hours a month previously spent organising data"],
+            ["1 photo", "replaces a manual roll-call for an entire class"],
+            ["0 images stored", "faces are kept as embeddings, never photographs"],
+          ].map(([stat, label]) => (
+            <Card key={stat} className="p-5">
+              <dt className="tnum text-3xl font-semibold text-primary">{stat}</dt>
+              <dd className="mt-1 text-sm text-muted">{label}</dd>
+            </Card>
+          ))}
+        </dl>
+      </section>
+
+      <section className="border-t border-border bg-surface-2/50">
+        <div className="mx-auto max-w-6xl px-5 py-16">
+          <h2 className="text-2xl font-semibold tracking-tight">What it does</h2>
+          <p className="mt-2 max-w-2xl text-muted">
+            Every module below writes to one database, which is what makes the analytics — and
+            UpayGPT — possible at all.
+          </p>
+          <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {features.map(({ icon: Icon, title, body }) => (
+              <Card key={title} className="p-5">
+                <span className="mb-3 inline-grid h-10 w-10 place-items-center rounded-[--radius-base] bg-accent-soft text-accent">
+                  <Icon className="size-5" />
+                </span>
+                <h3 className="font-semibold">{title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted">{body}</p>
+              </Card>
+            ))}
+          </div>
         </div>
-      </main>
-    </div>
+      </section>
+
+      <section className="mx-auto max-w-6xl px-5 py-16">
+        <Card className="overflow-hidden">
+          <div className="grid gap-8 p-8 lg:grid-cols-[1.1fr_1fr] lg:p-12">
+            <div>
+              <p className="mb-3 inline-flex items-center gap-2 rounded-full bg-accent-soft px-3 py-1 text-xs font-medium text-accent">
+                <Sparkles className="size-3.5" />
+                UpayGPT
+              </p>
+              <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+                Ask the database a question the way you would ask a colleague.
+              </h2>
+              <p className="mt-4 text-muted">
+                Nobody at a field NGO should need SQL to find out which centre is struggling. Type
+                the question; UpayGPT writes the query, runs it against the real data, and shows you
+                both the answer and the query it ran.
+              </p>
+              <p className="mt-4 text-sm text-muted">
+                That last part matters. The generated SQL is always visible and always logged — an
+                answer you cannot audit is not an answer.
+              </p>
+            </div>
+            <div className="rounded-[--radius-base] border border-border bg-surface-2 p-5 font-mono text-sm">
+              <p className="text-muted">&gt; Which centres had the lowest attendance last month?</p>
+              <p className="mt-3 text-foreground">
+                Three centres fell below 55%. Sitabuldi Signal dropped from 78% to 51% over six
+                weeks — the steepest decline in the programme.
+              </p>
+              <p className="mt-3 text-xs text-accent">▾ see the SQL I ran</p>
+            </div>
+          </div>
+        </Card>
+      </section>
+
+      <footer className="border-t border-border">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-5 py-8 text-sm text-muted">
+          <p>UPAY — Underprivileged Advancement by Youth. Footpathshala operations platform.</p>
+          <Link href="/login" className="hover:text-foreground">
+            Sign in →
+          </Link>
+        </div>
+      </footer>
+    </main>
   );
 }
