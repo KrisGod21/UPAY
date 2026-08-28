@@ -11,13 +11,12 @@ import {
 import { requireProfile } from "@/lib/auth";
 import {
   getCenterStats,
-  getStudentProgress,
-  getVolunteerStats,
-  getAttendanceDaily,
+  getAtRiskStudents,
+  getTopVolunteers,
+  getAttendanceWeekly,
   getHeadline,
-  toWeekly,
+  rollUpWeekly,
   decliningCenters,
-  atRiskStudents,
   understaffedCenters,
 } from "@/lib/queries";
 import {
@@ -44,11 +43,14 @@ export const metadata = { title: "Dashboard — UPAY Footpathshala" };
 export default async function DashboardPage() {
   const { profile, supabase } = await requireProfile();
 
-  const [centers, students, volunteers, daily] = await Promise.all([
+  // Everything the page renders, fetched once and in parallel. The at-risk and
+  // top-volunteer lists are filtered and limited in the database rather than by
+  // pulling every child and every volunteer across the network first.
+  const [centers, atRisk, topVolunteers, weeklyPoints] = await Promise.all([
     getCenterStats(supabase, profile),
-    getStudentProgress(supabase, profile),
-    getVolunteerStats(supabase, profile),
-    getAttendanceDaily(supabase, profile, 120),
+    getAtRiskStudents(supabase, profile, 6),
+    getTopVolunteers(supabase, profile, 6),
+    getAttendanceWeekly(supabase, profile, 120),
   ]);
 
   const headline = await getHeadline(supabase, profile, centers);
@@ -82,11 +84,9 @@ export default async function DashboardPage() {
       href: "/curriculum",
     }));
 
-  const weekly = toWeekly(daily);
+  const weekly = rollUpWeekly(weeklyPoints);
   const declining = decliningCenters(centers).slice(0, 4);
-  const atRisk = atRiskStudents(students).slice(0, 6);
   const understaffed = understaffedCenters(centers).slice(0, 4);
-  const topVolunteers = volunteers.slice(0, 6);
 
   const centreBars = [...centers]
     .filter((c) => c.attendance_30d != null)

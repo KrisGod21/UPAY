@@ -13,7 +13,8 @@
     "db:seed": "tsx scripts/seed.ts",
     "db:reset": "npm run db:push && npm run db:seed",
     "vercel:env": "tsx scripts/vercel-env.ts",
-    "deploy": "vercel deploy --prod"
+    "deploy": "vercel deploy --prod",
+    "smoke": "tsx scripts/smoke.ts"
   },
   "dependencies": {
     "@google/genai": "^2.18.0",

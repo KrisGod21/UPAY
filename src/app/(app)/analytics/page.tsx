@@ -3,8 +3,8 @@ import {
   getCenterStats,
   getStudentProgress,
   getVolunteerStats,
-  getAttendanceDaily,
-  toWeekly,
+  getAttendanceWeekly,
+  rollUpWeekly,
 } from "@/lib/queries";
 import { PageHeader, Stat, Card, CardHeader, CardTitle, CardContent, Badge } from "@/components/ui";
 import { ChartFrame, TrendChart, BarsChart, SharePie } from "@/components/charts";
@@ -15,11 +15,11 @@ export const metadata = { title: "Analytics — UPAY Footpathshala" };
 export default async function AnalyticsPage() {
   const { profile, supabase } = await requireProfile();
 
-  const [centers, students, volunteers, daily] = await Promise.all([
+  const [centers, students, volunteers, weeklyPoints] = await Promise.all([
     getCenterStats(supabase, profile),
     getStudentProgress(supabase, profile),
     getVolunteerStats(supabase, profile),
-    getAttendanceDaily(supabase, profile, 180),
+    getAttendanceWeekly(supabase, profile, 180),
   ]);
 
   /* ---------------------------------------------------- zone comparison */
@@ -32,7 +32,7 @@ export default async function AnalyticsPage() {
     byZone.set(c.zone_name, z);
   }
   const zoneByCenterId = new Map(centers.map((c) => [c.center_id, c.zone_name]));
-  for (const d of daily) {
+  for (const d of weeklyPoints) {
     const zoneName = zoneByCenterId.get(d.center_id);
     if (!zoneName) continue;
     const z = byZone.get(zoneName);
@@ -60,22 +60,14 @@ export default async function AnalyticsPage() {
 
   /* -------------------------------------------- how registers are marked */
 
+  // Counted in the rollup rather than by pulling thousands of raw rows across
+  // the network only to tally them in JavaScript.
   const methodByWeek = new Map<string, { face: number; manual: number }>();
-  const { data: methodRows } = await supabase
-    .from("attendance")
-    .select("method, created_at")
-    .order("created_at", { ascending: false })
-    .limit(5000);
-
-  for (const r of (methodRows ?? []) as { method: string; created_at: string }[]) {
-    const d = new Date(r.created_at);
-    const day = (d.getUTCDay() + 6) % 7;
-    d.setUTCDate(d.getUTCDate() - day);
-    const key = d.toISOString().slice(0, 10);
-    const b = methodByWeek.get(key) ?? { face: 0, manual: 0 };
-    if (r.method === "face") b.face += 1;
-    else b.manual += 1;
-    methodByWeek.set(key, b);
+  for (const p of weeklyPoints) {
+    const b = methodByWeek.get(p.week) ?? { face: 0, manual: 0 };
+    b.face += Number(p.by_face ?? 0);
+    b.manual += Number(p.by_hand ?? 0);
+    methodByWeek.set(p.week, b);
   }
 
   const methodRowsChart = [...methodByWeek.entries()]
@@ -114,19 +106,15 @@ export default async function AnalyticsPage() {
     .sort((a, b) => b.hours - a.hours)
     .slice(0, 10);
 
-  const weekly = toWeekly(daily);
+  const weekly = rollUpWeekly(weeklyPoints);
   const totalHours = volunteers.reduce((s, v) => s + Number(v.total_hours), 0);
   const scored = students.filter((s) => s.avg_score != null);
   const avgScore = scored.length
     ? Math.round((scored.reduce((s, x) => s + Number(x.avg_score), 0) / scored.length) * 10) / 10
     : 0;
-  const faceShare = methodRows?.length
-    ? Math.round(
-        ((methodRows as { method: string }[]).filter((r) => r.method === "face").length /
-          methodRows.length) *
-          100,
-      )
-    : 0;
+  const totalMarked = weeklyPoints.reduce((s, p) => s + Number(p.marked ?? 0), 0);
+  const totalByFace = weeklyPoints.reduce((s, p) => s + Number(p.by_face ?? 0), 0);
+  const faceShare = totalMarked ? Math.round((totalByFace / totalMarked) * 100) : 0;
 
   return (
     <>
@@ -149,7 +137,7 @@ export default async function AnalyticsPage() {
         <Stat
           label="Registers marked by face"
           value={`${faceShare}%`}
-          sub="of recent attendance records"
+          sub="over the last six months"
           tone="peach"
           emoji="📸"
         />

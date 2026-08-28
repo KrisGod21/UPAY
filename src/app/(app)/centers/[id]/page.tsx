@@ -18,7 +18,7 @@ import {
 } from "@/components/ui";
 import { ChartFrame, TrendChart } from "@/components/charts";
 import { LEVEL_LABELS, formatDate } from "@/lib/utils";
-import { toWeekly, type DailyPoint } from "@/lib/queries";
+import { rollUpWeekly, type WeeklyPoint } from "@/lib/queries";
 
 export default async function CenterPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -37,11 +37,11 @@ export default async function CenterPage({ params }: { params: Promise<{ id: str
 
   const [{ data: daily }, { data: students }, { data: staff }, { data: sessions }] = await Promise.all([
     supabase
-      .from("v_attendance_daily")
+      .from("v_attendance_weekly")
       .select("*")
       .eq("center_id", id)
-      .gte("session_date", since.toISOString().slice(0, 10))
-      .order("session_date"),
+      .gte("week", since.toISOString().slice(0, 10))
+      .order("week"),
     supabase
       .from("v_student_progress")
       .select("*")
@@ -61,7 +61,7 @@ export default async function CenterPage({ params }: { params: Promise<{ id: str
       .limit(12),
   ]);
 
-  const weekly = toWeekly((daily ?? []) as DailyPoint[]);
+  const weekly = rollUpWeekly((daily ?? []) as WeeklyPoint[]);
   const delta =
     stat.attendance_30d != null && stat.attendance_prev_30d != null
       ? stat.attendance_30d - stat.attendance_prev_30d

@@ -12,6 +12,9 @@ drop function if exists public.auth_center() cascade;
 drop function if exists public.is_admin() cascade;
 drop function if exists public.is_staff() cascade;
 drop function if exists public.can_touch_center(uuid) cascade;
+drop function if exists public.visible_center_ids() cascade;
+drop function if exists public.visible_session_ids() cascade;
+drop function if exists public.visible_student_ids() cascade;
 drop function if exists public.handle_new_user() cascade;
 
 drop table if exists public.badges cascade;
@@ -315,6 +318,43 @@ $fn$
   end
 $fn$;
 
+-- Scope as a SET rather than a per-row test.
+--
+-- The predicate form matters enormously. `can_touch_center(center_id)` is a
+-- function call Postgres cannot hoist, so it runs once per scanned row — 40,000
+-- times to produce twenty aggregate rows, which took five seconds and timed the
+-- analytics views out entirely. `col in (select visible_center_ids())` is
+-- evaluated once as a hashed InitPlan, and each row then costs a hash lookup.
+--
+-- All three are SECURITY DEFINER so the lookups inside them do not re-trigger
+-- RLS on the tables they read, which would reintroduce the per-row cost.
+create function public.visible_center_ids() returns setof uuid
+  language sql stable security definer set search_path = public as
+$fn$
+  select c.id from public.centers c
+  where case public.auth_role()
+    when 'admin' then true
+    when 'coordinator' then c.zone_id = public.auth_zone()
+    when 'teacher' then c.id = public.auth_center()
+    when 'volunteer' then c.id = public.auth_center()
+    else false
+  end
+$fn$;
+
+create function public.visible_session_ids() returns setof uuid
+  language sql stable security definer set search_path = public as
+$fn$
+  select cs.id from public.class_sessions cs
+  where cs.center_id in (select public.visible_center_ids())
+$fn$;
+
+create function public.visible_student_ids() returns setof uuid
+  language sql stable security definer set search_path = public as
+$fn$
+  select s.id from public.students s
+  where s.center_id in (select public.visible_center_ids())
+$fn$;
+
 -- Mirror new auth users into profiles so real signups work, not only seeded ones.
 create function public.handle_new_user() returns trigger
   language plpgsql security definer set search_path = public as
@@ -355,112 +395,104 @@ alter table public.ai_queries         enable row level security;
 
 -- profiles: everyone sees their own row; staff see the org; admins write anything
 create policy profiles_self_read on public.profiles for select
-  using (id = auth.uid() or public.is_staff());
+  using (id = (select auth.uid()) or public.is_staff());
 create policy profiles_self_update on public.profiles for update
-  using (id = auth.uid() or public.is_admin());
+  using (id = (select auth.uid()) or public.is_admin());
 create policy profiles_admin_write on public.profiles for insert
   with check (public.is_admin());
 
 -- Zones stay readable so names resolve; the centres inside them are what is scoped.
-create policy zones_read on public.zones for select using (auth.uid() is not null);
+create policy zones_read on public.zones for select using ((select auth.uid()) is not null);
 create policy zones_write on public.zones for all
   using (public.is_admin()) with check (public.is_admin());
 
 -- Write policies are split per command on purpose. A FOR ALL policy also grants
 -- SELECT, and because policies are OR'd, one permissive FOR ALL silently
 -- overrode every narrower read rule below it.
+--
+-- Every scoped predicate is written as `col in (select ...)` so it is hoisted
+-- into a single hashed InitPlan instead of being called once per row.
 create policy centers_read on public.centers for select
-  using (public.can_touch_center(id));
+  using (id in (select public.visible_center_ids()));
 create policy centers_insert on public.centers for insert
   with check (public.auth_role() in ('admin', 'coordinator'));
 create policy centers_update on public.centers for update
-  using (public.can_touch_center(id) and public.auth_role() in ('admin', 'coordinator'))
+  using (id in (select public.visible_center_ids()) and public.auth_role() in ('admin', 'coordinator'))
   with check (public.auth_role() in ('admin', 'coordinator'));
 create policy centers_delete on public.centers for delete using (public.is_admin());
 
 create policy students_read on public.students for select using (
-  public.can_touch_center(center_id)
-  or student_code = (select email from public.profiles where id = auth.uid())
+  center_id in (select public.visible_center_ids())
+  or student_code = (select email from public.profiles where id = (select auth.uid()))
 );
 create policy students_insert on public.students for insert
-  with check (public.can_touch_center(center_id));
+  with check (center_id in (select public.visible_center_ids()));
 create policy students_update on public.students for update
-  using (public.can_touch_center(center_id)) with check (public.can_touch_center(center_id));
+  using (center_id in (select public.visible_center_ids()))
+  with check (center_id in (select public.visible_center_ids()));
 create policy students_delete on public.students for delete
-  using (public.can_touch_center(center_id) and public.auth_role() in ('admin', 'coordinator'));
+  using (center_id in (select public.visible_center_ids())
+         and public.auth_role() in ('admin', 'coordinator'));
 
 create policy sessions_read on public.class_sessions for select
-  using (public.can_touch_center(center_id));
+  using (center_id in (select public.visible_center_ids()));
 create policy sessions_insert on public.class_sessions for insert
-  with check (public.can_touch_center(center_id));
+  with check (center_id in (select public.visible_center_ids()));
 create policy sessions_update on public.class_sessions for update
-  using (public.can_touch_center(center_id)) with check (public.can_touch_center(center_id));
+  using (center_id in (select public.visible_center_ids()))
+  with check (center_id in (select public.visible_center_ids()));
 create policy sessions_delete on public.class_sessions for delete
-  using (public.can_touch_center(center_id));
+  using (center_id in (select public.visible_center_ids()));
 
-create policy attendance_read on public.attendance for select using (
-  exists (
-    select 1 from public.class_sessions cs
-    where cs.id = session_id and public.can_touch_center(cs.center_id)
-  )
-);
-create policy attendance_insert on public.attendance for insert with check (
-  exists (
-    select 1 from public.class_sessions cs
-    where cs.id = session_id and public.can_touch_center(cs.center_id)
-  )
-);
-create policy attendance_update on public.attendance for update using (
-  exists (
-    select 1 from public.class_sessions cs
-    where cs.id = session_id and public.can_touch_center(cs.center_id)
-  )
-);
+create policy attendance_read on public.attendance for select
+  using (session_id in (select public.visible_session_ids()));
+create policy attendance_insert on public.attendance for insert
+  with check (session_id in (select public.visible_session_ids()));
+create policy attendance_update on public.attendance for update
+  using (session_id in (select public.visible_session_ids()));
 
 create policy checkins_read on public.volunteer_checkins for select
-  using (volunteer_id = auth.uid() or public.can_touch_center(center_id));
+  using (volunteer_id = (select auth.uid()) or center_id in (select public.visible_center_ids()));
 create policy checkins_insert on public.volunteer_checkins for insert
-  with check (volunteer_id = auth.uid() or public.is_admin());
+  with check (volunteer_id = (select auth.uid()) or public.is_admin());
 create policy checkins_update on public.volunteer_checkins for update
-  using (volunteer_id = auth.uid() or public.is_admin());
+  using (volunteer_id = (select auth.uid()) or public.is_admin());
 
-create policy curriculum_read on public.curriculum_units for select using (auth.uid() is not null);
+create policy curriculum_read on public.curriculum_units for select
+  using ((select auth.uid()) is not null);
 create policy curriculum_write on public.curriculum_units for all
   using (public.auth_role() in ('admin', 'coordinator', 'teacher'))
   with check (public.auth_role() in ('admin', 'coordinator', 'teacher'));
 
 create policy center_curriculum_read on public.center_curriculum for select
-  using (public.can_touch_center(center_id));
+  using (center_id in (select public.visible_center_ids()));
 create policy center_curriculum_write on public.center_curriculum for all
-  using (public.can_touch_center(center_id)) with check (public.can_touch_center(center_id));
+  using (center_id in (select public.visible_center_ids()))
+  with check (center_id in (select public.visible_center_ids()));
 
 create policy assessments_read on public.assessments for select
-  using (center_id is null or public.can_touch_center(center_id));
+  using (center_id is null or center_id in (select public.visible_center_ids()));
 create policy assessments_write on public.assessments for all
   using (public.is_staff()) with check (public.is_staff());
 
-create policy results_read on public.assessment_results for select using (
-  exists (
-    select 1 from public.students s
-    where s.id = student_id and public.can_touch_center(s.center_id)
-  )
-);
+create policy results_read on public.assessment_results for select
+  using (student_id in (select public.visible_student_ids()));
 create policy results_write on public.assessment_results for all
   using (public.is_staff()) with check (public.is_staff());
 
 create policy certificates_read on public.certificates for select
-  using (public.is_staff() or volunteer_id = auth.uid());
+  using (public.is_staff() or volunteer_id = (select auth.uid()));
 create policy certificates_write on public.certificates for all
   using (public.is_admin()) with check (public.is_admin());
 
-create policy badges_read on public.badges for select using (auth.uid() is not null);
+create policy badges_read on public.badges for select using ((select auth.uid()) is not null);
 create policy badges_write on public.badges for all
   using (public.is_staff()) with check (public.is_staff());
 
 create policy ai_queries_read on public.ai_queries for select
-  using (public.is_admin() or user_id = auth.uid());
+  using (public.is_admin() or user_id = (select auth.uid()));
 create policy ai_queries_write on public.ai_queries for insert
-  with check (auth.uid() is not null);
+  with check ((select auth.uid()) is not null);
 
 -- ------------------------------------------------------ UpayGPT query gateway
 -- Executes one model-generated SELECT under hard constraints. SECURITY INVOKER,
@@ -607,6 +639,28 @@ left join public.centers c on c.id = p.center_id
 where p.role in ('volunteer', 'teacher')
 group by p.id, p.full_name, p.email, p.role, p.center_id, c.name, c.zone_id, p.joined_on;
 
-grant select on public.v_attendance_daily, public.v_center_stats,
-                public.v_student_progress, public.v_volunteer_stats
+create or replace view public.v_attendance_weekly
+with (security_invoker = true) as
+select
+  date_trunc('week', cs.session_date)::date as week,
+  cs.center_id,
+  c.zone_id,
+  count(*)                                     as marked,
+  count(*) filter (where a.status <> 'absent') as present,
+  count(*) filter (where a.method = 'face')    as by_face,
+  count(*) filter (where a.method = 'manual')  as by_hand,
+  round(
+    100.0 * count(*) filter (where a.status <> 'absent') / nullif(count(*), 0), 1
+  ) as attendance_rate
+from public.attendance a
+join public.class_sessions cs on cs.id = a.session_id
+join public.centers c on c.id = cs.center_id
+group by 1, 2, 3;
+
+grant select on public.v_attendance_daily, public.v_attendance_weekly,
+                public.v_center_stats, public.v_student_progress,
+                public.v_volunteer_stats
+  to authenticated;
+grant execute on function public.visible_center_ids(), public.visible_session_ids(),
+                          public.visible_student_ids()
   to authenticated;

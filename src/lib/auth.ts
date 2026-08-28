@@ -1,9 +1,17 @@
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { Profile, UserRole } from "@/lib/types";
 
-/** The signed-in user's profile, or a redirect to the login page. */
-export async function requireProfile(): Promise<{
+/**
+ * The signed-in user's profile, or a redirect to the login page.
+ *
+ * Wrapped in React's cache() because the layout and the page both need it, and
+ * without memoisation every page paid for two auth round-trips and two profile
+ * lookups instead of one. The cache is per-request, so it never leaks a profile
+ * between users.
+ */
+export const requireProfile = cache(async function requireProfile(): Promise<{
   profile: Profile;
   supabase: Awaited<ReturnType<typeof createClient>>;
 }> {
@@ -28,7 +36,7 @@ export async function requireProfile(): Promise<{
   }
 
   return { profile, supabase };
-}
+});
 
 export async function requireRole(roles: UserRole[]) {
   const ctx = await requireProfile();

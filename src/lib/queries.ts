@@ -117,6 +117,61 @@ export async function getAttendanceDaily(
   return (data ?? []) as DailyPoint[];
 }
 
+export interface WeeklyPoint {
+  week: string;
+  center_id: string;
+  zone_id: string;
+  marked: number;
+  present: number;
+  by_face: number;
+  by_hand: number;
+  attendance_rate: number | null;
+}
+
+/**
+ * Weekly rollup, aggregated in Postgres rather than in JavaScript.
+ *
+ * The daily view returns one row per centre per class day — over 120 days that
+ * exceeded PostgREST's 1000-row default cap, so the trend chart was silently
+ * missing data as well as being slow. Rolling up in SQL returns a fraction of
+ * the rows and cannot be truncated.
+ */
+export async function getAttendanceWeekly(
+  supabase: SB,
+  profile: Profile,
+  sinceDays = 120,
+): Promise<WeeklyPoint[]> {
+  const since = new Date();
+  since.setDate(since.getDate() - sinceDays);
+  const { data } = await scope(
+    supabase
+      .from("v_attendance_weekly")
+      .select("*")
+      .gte("week", since.toISOString().slice(0, 10))
+      .order("week"),
+    profile,
+  );
+  return (data ?? []) as WeeklyPoint[];
+}
+
+/** Sums the per-centre weekly rows into one programme-wide series. */
+export function rollUpWeekly(points: WeeklyPoint[]): { week: string; rate: number; marked: number }[] {
+  const buckets = new Map<string, { present: number; marked: number }>();
+  for (const p of points) {
+    const b = buckets.get(p.week) ?? { present: 0, marked: 0 };
+    b.present += p.present;
+    b.marked += p.marked;
+    buckets.set(p.week, b);
+  }
+  return [...buckets.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([week, b]) => ({
+      week: new Date(week).toLocaleDateString("en-IN", { day: "2-digit", month: "short" }),
+      rate: b.marked ? Math.round((b.present / b.marked) * 1000) / 10 : 0,
+      marked: b.marked,
+    }));
+}
+
 /** Collapses daily points into weekly programme-wide attendance. */
 export function toWeekly(points: DailyPoint[]): { week: string; rate: number; marked: number }[] {
   const buckets = new Map<string, { present: number; marked: number }>();
@@ -218,4 +273,39 @@ export function understaffedCenters(centers: CenterStat[], ratio = 12): CenterSt
   return centers
     .filter((c) => c.students > 0 && c.students / Math.max(1, c.volunteers) > ratio)
     .sort((a, b) => b.students / Math.max(1, b.volunteers) - a.students / Math.max(1, a.volunteers));
+}
+
+/** At-risk children, filtered in the database instead of over the whole roster. */
+export async function getAtRiskStudents(
+  supabase: SB,
+  profile: Profile,
+  limit = 8,
+): Promise<StudentProgress[]> {
+  const { data } = await scope(
+    supabase
+      .from("v_student_progress")
+      .select("*")
+      .or("attendance_rate.lt.55,avg_score.lt.40")
+      .order("attendance_rate", { ascending: true })
+      .limit(limit),
+    profile,
+  );
+  return (data ?? []) as StudentProgress[];
+}
+
+/** Top volunteers by hours, limited in the database. */
+export async function getTopVolunteers(
+  supabase: SB,
+  profile: Profile,
+  limit = 6,
+): Promise<VolunteerStat[]> {
+  const { data } = await scope(
+    supabase
+      .from("v_volunteer_stats")
+      .select("*")
+      .order("total_hours", { ascending: false })
+      .limit(limit),
+    profile,
+  );
+  return (data ?? []) as VolunteerStat[];
 }

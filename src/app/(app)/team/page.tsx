@@ -28,7 +28,12 @@ export default async function TeamPage() {
 
   const { data } = await supabase
     .from("profiles")
-    .select("id, full_name, email, role, phone, active, joined_on, centers(name), zones(name)")
+    // Both embeds name their foreign key: profiles <-> zones is ambiguous, since a
+    // zone also points back at a profile as its coordinator.
+    .select(
+      "id, full_name, email, role, phone, active, joined_on, " +
+        "centers!profiles_center_fk(name), zones!profiles_zone_fk(name)",
+    )
     .order("role")
     .order("full_name")
     .limit(300);

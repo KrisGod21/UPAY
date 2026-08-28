@@ -19,7 +19,12 @@ export default async function ZonesPage() {
   const { profile, supabase } = await requireProfile();
 
   const [{ data: zones }, centers] = await Promise.all([
-    supabase.from("zones").select("id, name, city, state, profiles(full_name)").order("name"),
+    // zones and profiles reference each other twice (a zone has a coordinator, a
+    // profile belongs to a zone), so the embed must name which foreign key it means.
+    supabase
+      .from("zones")
+      .select("id, name, city, state, profiles!zones_coordinator_id_fkey(full_name)")
+      .order("name"),
     getCenterStats(supabase, profile),
   ]);
 
