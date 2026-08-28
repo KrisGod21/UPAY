@@ -11,6 +11,7 @@ drop function if exists public.auth_zone() cascade;
 drop function if exists public.auth_center() cascade;
 drop function if exists public.is_admin() cascade;
 drop function if exists public.is_staff() cascade;
+drop function if exists public.can_touch_center(uuid) cascade;
 drop function if exists public.handle_new_user() cascade;
 
 drop table if exists public.badges cascade;
@@ -297,6 +298,23 @@ create function public.is_staff() returns boolean
 $$ select coalesce((select role from public.profiles where id = auth.uid())
      in ('admin', 'coordinator', 'teacher', 'volunteer'), false) $$;
 
+-- One place that answers "may this account act on this centre?". Every scoped
+-- policy delegates here so the rule cannot drift between tables. SECURITY
+-- DEFINER, so reading centers inside a policy on centers does not recurse.
+create function public.can_touch_center(cid uuid) returns boolean
+  language sql stable security definer set search_path = public as
+$fn$
+  select case public.auth_role()
+    when 'admin' then true
+    when 'coordinator' then exists (
+      select 1 from public.centers c where c.id = cid and c.zone_id = public.auth_zone()
+    )
+    when 'teacher' then cid = public.auth_center()
+    when 'volunteer' then cid = public.auth_center()
+    else false
+  end
+$fn$;
+
 -- Mirror new auth users into profiles so real signups work, not only seeded ones.
 create function public.handle_new_user() returns trigger
   language plpgsql security definer set search_path = public as
@@ -343,53 +361,90 @@ create policy profiles_self_update on public.profiles for update
 create policy profiles_admin_write on public.profiles for insert
   with check (public.is_admin());
 
--- zones and centers: readable by any authenticated user, written by admin/coordinator
+-- Zones stay readable so names resolve; the centres inside them are what is scoped.
 create policy zones_read on public.zones for select using (auth.uid() is not null);
 create policy zones_write on public.zones for all
   using (public.is_admin()) with check (public.is_admin());
 
-create policy centers_read on public.centers for select using (auth.uid() is not null);
-create policy centers_write on public.centers for all
-  using (public.auth_role() in ('admin', 'coordinator'))
+-- Write policies are split per command on purpose. A FOR ALL policy also grants
+-- SELECT, and because policies are OR'd, one permissive FOR ALL silently
+-- overrode every narrower read rule below it.
+create policy centers_read on public.centers for select
+  using (public.can_touch_center(id));
+create policy centers_insert on public.centers for insert
   with check (public.auth_role() in ('admin', 'coordinator'));
+create policy centers_update on public.centers for update
+  using (public.can_touch_center(id) and public.auth_role() in ('admin', 'coordinator'))
+  with check (public.auth_role() in ('admin', 'coordinator'));
+create policy centers_delete on public.centers for delete using (public.is_admin());
 
--- students: admins everywhere, coordinators in their zone, staff at their center,
--- and a student sees only the record linked to their own profile
 create policy students_read on public.students for select using (
-  public.is_admin()
-  or (public.auth_role() = 'coordinator'
-      and center_id in (select id from public.centers where zone_id = public.auth_zone()))
-  or (public.auth_role() in ('teacher', 'volunteer') and center_id = public.auth_center())
+  public.can_touch_center(center_id)
   or student_code = (select email from public.profiles where id = auth.uid())
 );
-create policy students_write on public.students for all
-  using (public.is_staff()) with check (public.is_staff());
+create policy students_insert on public.students for insert
+  with check (public.can_touch_center(center_id));
+create policy students_update on public.students for update
+  using (public.can_touch_center(center_id)) with check (public.can_touch_center(center_id));
+create policy students_delete on public.students for delete
+  using (public.can_touch_center(center_id) and public.auth_role() in ('admin', 'coordinator'));
 
--- operational tables: staff read and write, scoped by the app layer
-create policy sessions_rw on public.class_sessions for all
-  using (public.is_staff()) with check (public.is_staff());
-create policy attendance_rw on public.attendance for all
-  using (public.is_staff()) with check (public.is_staff());
+create policy sessions_read on public.class_sessions for select
+  using (public.can_touch_center(center_id));
+create policy sessions_insert on public.class_sessions for insert
+  with check (public.can_touch_center(center_id));
+create policy sessions_update on public.class_sessions for update
+  using (public.can_touch_center(center_id)) with check (public.can_touch_center(center_id));
+create policy sessions_delete on public.class_sessions for delete
+  using (public.can_touch_center(center_id));
+
+create policy attendance_read on public.attendance for select using (
+  exists (
+    select 1 from public.class_sessions cs
+    where cs.id = session_id and public.can_touch_center(cs.center_id)
+  )
+);
+create policy attendance_insert on public.attendance for insert with check (
+  exists (
+    select 1 from public.class_sessions cs
+    where cs.id = session_id and public.can_touch_center(cs.center_id)
+  )
+);
+create policy attendance_update on public.attendance for update using (
+  exists (
+    select 1 from public.class_sessions cs
+    where cs.id = session_id and public.can_touch_center(cs.center_id)
+  )
+);
+
 create policy checkins_read on public.volunteer_checkins for select
-  using (public.is_staff() or volunteer_id = auth.uid());
-create policy checkins_write on public.volunteer_checkins for all
-  using (volunteer_id = auth.uid() or public.is_admin())
+  using (volunteer_id = auth.uid() or public.can_touch_center(center_id));
+create policy checkins_insert on public.volunteer_checkins for insert
   with check (volunteer_id = auth.uid() or public.is_admin());
+create policy checkins_update on public.volunteer_checkins for update
+  using (volunteer_id = auth.uid() or public.is_admin());
 
 create policy curriculum_read on public.curriculum_units for select using (auth.uid() is not null);
 create policy curriculum_write on public.curriculum_units for all
   using (public.auth_role() in ('admin', 'coordinator', 'teacher'))
   with check (public.auth_role() in ('admin', 'coordinator', 'teacher'));
 
-create policy center_curriculum_read on public.center_curriculum for select using (auth.uid() is not null);
+create policy center_curriculum_read on public.center_curriculum for select
+  using (public.can_touch_center(center_id));
 create policy center_curriculum_write on public.center_curriculum for all
-  using (public.is_staff()) with check (public.is_staff());
+  using (public.can_touch_center(center_id)) with check (public.can_touch_center(center_id));
 
-create policy assessments_read on public.assessments for select using (auth.uid() is not null);
+create policy assessments_read on public.assessments for select
+  using (center_id is null or public.can_touch_center(center_id));
 create policy assessments_write on public.assessments for all
   using (public.is_staff()) with check (public.is_staff());
 
-create policy results_read on public.assessment_results for select using (auth.uid() is not null);
+create policy results_read on public.assessment_results for select using (
+  exists (
+    select 1 from public.students s
+    where s.id = student_id and public.can_touch_center(s.center_id)
+  )
+);
 create policy results_write on public.assessment_results for all
   using (public.is_staff()) with check (public.is_staff());
 
@@ -403,7 +458,7 @@ create policy badges_write on public.badges for all
   using (public.is_staff()) with check (public.is_staff());
 
 create policy ai_queries_read on public.ai_queries for select
-  using (public.is_staff() or user_id = auth.uid());
+  using (public.is_admin() or user_id = auth.uid());
 create policy ai_queries_write on public.ai_queries for insert
   with check (auth.uid() is not null);
 
@@ -443,8 +498,12 @@ begin
   set local statement_timeout = '5s';
   set local default_transaction_read_only = on;
 
-  execute format('select coalesce(jsonb_agg(t), ''[]''::jsonb) from (%s limit 500) t', cleaned)
-    into result;
+  -- Nest the model's query rather than appending to it: a generated query that
+  -- already ends in LIMIT would otherwise produce "limit 3 limit 500".
+  execute format(
+    'select coalesce(jsonb_agg(t), ''[]''::jsonb) from (select * from (%s) as q limit 500) t',
+    cleaned
+  ) into result;
 
   return result;
 end;

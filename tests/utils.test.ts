@@ -4,6 +4,7 @@ import {
   descriptorDistance,
   bestMatch,
   pct,
+  stripOptionPrefix,
 } from "@/lib/utils";
 
 describe("haversineMeters", () => {
@@ -93,4 +94,17 @@ describe("pct", () => {
   it("rounds to a whole percent", () => {
     expect(pct(1, 3)).toBe(33);
   });
+});
+
+describe("stripOptionPrefix", () => {
+  it("removes a letter with a full stop", () =>
+    expect(stripOptionPrefix("A. 12 rupees")).toBe("12 rupees"));
+  it("removes a letter with a bracket", () =>
+    expect(stripOptionPrefix("B) 16 rupees")).toBe("16 rupees"));
+  it("leaves an option that has no prefix alone", () =>
+    expect(stripOptionPrefix("12 rupees")).toBe("12 rupees"));
+  it("does not eat a real answer that starts with a letter", () =>
+    expect(stripOptionPrefix("Apple")).toBe("Apple"));
+  it("does not strip beyond A-D", () =>
+    expect(stripOptionPrefix("E. none")).toBe("E. none"));
 });

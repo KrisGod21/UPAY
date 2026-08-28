@@ -80,6 +80,20 @@ const CENTER_NAMES = [
   ["Swargate Signal", "Yerawada Basti", "Kothrud Footpath"],
 ];
 
+/**
+ * Three-letter zone prefix for centre codes. Derived from the zone NAME, not the
+ * city: two zones share the city Nagpur, and slicing the city gave both of them
+ * the same prefix and a unique-constraint collision.
+ */
+function zoneCode(zoneName: string): string {
+  const words = zoneName.split(/\s+/);
+  const code =
+    words.length > 1
+      ? `${words[0].slice(0, 2)}${words[1][0]}`
+      : words[0].slice(0, 3);
+  return code.toUpperCase();
+}
+
 /** The centre whose attendance is engineered to visibly decline. */
 const DECLINING_CENTER = "Sitabuldi Signal";
 /** Centres deliberately left short of volunteers. */
@@ -207,7 +221,7 @@ async function main() {
     CENTER_NAMES[zi].map((name, ci) => ({
       zone_id: zoneId.get(zone.name)!,
       name,
-      code: `${zone.city.slice(0, 3).toUpperCase()}-${String(ci + 1).padStart(2, "0")}`,
+      code: `${zoneCode(zone.name)}-${String(ci + 1).padStart(2, "0")}`,
       address: `Near ${name}, ${zone.city}`,
       // Scatter centres a few hundred metres around the zone centroid.
       lat: zone.lat + (rand() - 0.5) * 0.05,
@@ -380,28 +394,52 @@ async function main() {
   const decliningId = demoCenter.id;
   const attendancePayload: Record<string, unknown>[] = [];
 
+  // Index by date string once. postgres.js hands back a Date for a `date`
+  // column, so String(...).slice(0, 10) yields "Wed Aug 2" and never matches —
+  // which silently pinned every session to progress 1 and flattened the
+  // engineered decline into a straight line.
+  const dayIndexOf = new Map(dates.map((d, i) => [ymd(d), i]));
+  const sessionDayKey = (value: unknown): string =>
+    value instanceof Date ? ymd(value) : String(value).slice(0, 10);
+
+  // Each centre gets one stable baseline, spread across a realistic range.
+  const baselineByCenter = new Map(centerRows.map((c) => [c.id, 0.62 + rand() * 0.2]));
+
+  const understaffedIds = new Set(
+    centerRows.filter((c) => UNDERSTAFFED.has(c.name)).map((c) => c.id),
+  );
+
   for (const session of sessionRows) {
     const roster = studentsByCenter.get(session.center_id) ?? [];
-    const dayIndex = dates.findIndex((d) => ymd(d) === String(session.session_date).slice(0, 10));
-    const progress = dayIndex < 0 ? 1 : dayIndex / dates.length; // 0 = oldest, 1 = newest
+    const dayIndex = dayIndexOf.get(sessionDayKey(session.session_date)) ?? dates.length - 1;
+    const progress = dayIndex / (dates.length - 1); // 0 = oldest, 1 = newest
 
-    // Baseline attendance rate, with one centre engineered to slide from ~78% to ~51%.
-    let rate = 0.72 + (rand() - 0.5) * 0.08;
-    if (session.center_id === decliningId) rate = 0.78 - progress * 0.27;
-    if (UNDERSTAFFED.has(centerRows.find((c) => c.id === session.center_id)?.name ?? "")) rate -= 0.06;
+    // A centre's own attendance is fairly stable week to week; centres differ
+    // from each other. Drawing a fresh rate per session instead produced
+    // month-on-month swings of 8 points from noise alone, which buried the one
+    // real decline under five fake ones.
+    let rate = baselineByCenter.get(session.center_id) ?? 0.72;
+    rate += (rand() - 0.5) * 0.03;
+    if (session.center_id === decliningId) rate = 0.82 - progress * 0.37 + (rand() - 0.5) * 0.03;
+    if (understaffedIds.has(session.center_id)) rate -= 0.06;
+
+    // Face recognition arrives partway through and is adopted steadily, so the
+    // manual-to-automatic shift is visible in the analytics rather than assumed.
+    const faceAdoption = progress < 0.55 ? 0 : Math.min(0.85, (progress - 0.55) * 2.2);
 
     for (const student of roster) {
       let p = rate;
       if (atRisk.has(student.id)) p -= 0.3;
       const present = chance(Math.max(0.05, Math.min(0.97, p)));
       const late = present && chance(0.09);
+      // One draw decides the method, so confidence can never disagree with it.
+      const byFace = chance(faceAdoption);
       attendancePayload.push({
         session_id: session.id,
         student_id: student.id,
         status: present ? (late ? "late" : "present") : "absent",
-        // Historic records were captured manually; recent ones came from the app.
-        method: progress > 0.82 && chance(0.7) ? "face" : "manual",
-        confidence: progress > 0.82 && chance(0.7) ? Number((0.72 + rand() * 0.27).toFixed(2)) : null,
+        method: byFace ? "face" : "manual",
+        confidence: byFace ? Number((0.72 + rand() * 0.27).toFixed(2)) : null,
       });
     }
   }

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Loader2, Sparkles, TriangleAlert, Wand2 } from "lucide-react";
 import { createAssessment } from "../actions";
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Field, Input, Select, Textarea } from "@/components/ui";
-import { LEVEL_LABELS } from "@/lib/utils";
+import { LEVEL_LABELS, stripOptionPrefix } from "@/lib/utils";
 import type { Question } from "@/lib/types";
 
 const SUBJECTS = ["Numeracy", "Literacy", "Environmental Studies", "Life Skills", "English", "Art & Expression"];
@@ -172,7 +172,7 @@ export function AssessmentGenerator({
                             <span className="grid size-6 shrink-0 place-items-center rounded-full bg-surface text-xs font-bold">
                               {"ABCD"[i]}
                             </span>
-                            {opt}
+                            {stripOptionPrefix(opt)}
                           </li>
                         ))}
                       </ul>

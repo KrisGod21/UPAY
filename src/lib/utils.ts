@@ -89,3 +89,11 @@ export function formatDate(value: string | Date | null | undefined): string {
 export function pct(n: number, total: number): number {
   return total > 0 ? Math.round((n / total) * 100) : 0;
 }
+
+/**
+ * Drops a leading "A." / "B)" from a generated option. The model tends to number
+ * its own options, and the paper already renders a letter badge beside each one.
+ */
+export function stripOptionPrefix(option: string): string {
+  return option.replace(/^\s*[A-Da-d]\s*[.)]\s*/, "").trim();
+}

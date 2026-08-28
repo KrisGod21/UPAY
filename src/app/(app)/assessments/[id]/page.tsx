@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, Printer, Sparkles } from "lucide-react";
 import { requireProfile } from "@/lib/auth";
 import { Badge, Card, CardContent, CardHeader, CardTitle, EmptyState, PageHeader, Table, Td, Th } from "@/components/ui";
-import { LEVEL_LABELS, formatDate } from "@/lib/utils";
+import { LEVEL_LABELS, formatDate, stripOptionPrefix } from "@/lib/utils";
 import type { Assessment } from "@/lib/types";
 import { SheetGrader } from "./grader";
 
@@ -95,7 +95,7 @@ export default async function AssessmentPage({ params }: { params: Promise<{ id:
                             <span className="grid size-6 shrink-0 place-items-center rounded-full bg-surface text-xs font-bold">
                               {"ABCD"[i]}
                             </span>
-                            {opt}
+                            {stripOptionPrefix(opt)}
                           </li>
                         ))}
                       </ul>
