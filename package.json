@@ -11,7 +11,9 @@
     "test:watch": "vitest",
     "db:push": "tsx scripts/db-push.ts",
     "db:seed": "tsx scripts/seed.ts",
-    "db:reset": "npm run db:push && npm run db:seed"
+    "db:reset": "npm run db:push && npm run db:seed",
+    "vercel:env": "tsx scripts/vercel-env.ts",
+    "deploy": "vercel deploy --prod"
   },
   "dependencies": {
     "@google/genai": "^2.18.0",
@@ -50,6 +52,7 @@
     "tailwindcss": "^4",
     "tsx": "^4.23.12",
     "typescript": "^5",
+    "vercel": "^59.9.1",
     "vitest": "^4.1.11"
   }
 }
