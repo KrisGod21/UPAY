@@ -7,13 +7,19 @@
 import { spawn } from "node:child_process";
 import { readFileSync } from "node:fs";
 
-const KEYS = [
+const REQUIRED_KEYS = [
   "NEXT_PUBLIC_SUPABASE_URL",
   "NEXT_PUBLIC_SUPABASE_ANON_KEY",
   "SUPABASE_SERVICE_ROLE_KEY",
   "GEMINI_API_KEY",
   "DEMO_PASSWORD",
 ] as const;
+
+// The chatbot no-ops when unset, so it should never block a deploy that
+// doesn't have a Botpress bot configured yet.
+const OPTIONAL_KEYS = ["NEXT_PUBLIC_BOTPRESS_INJECT_SRC", "NEXT_PUBLIC_BOTPRESS_CONFIG_SRC"] as const;
+
+const KEYS = [...REQUIRED_KEYS, ...OPTIONAL_KEYS] as const;
 
 const ENVIRONMENTS = ["production", "preview", "development"] as const;
 
@@ -47,15 +53,19 @@ function addVar(key: string, value: string, environment: string): Promise<void> 
 
 async function main() {
   const env = readEnvLocal();
-  const missing = KEYS.filter((k) => !env[k]);
+  const missing = REQUIRED_KEYS.filter((k) => !env[k]);
   if (missing.length) {
     console.error(`Missing from .env.local: ${missing.join(", ")}`);
     process.exit(1);
   }
 
+  const present = KEYS.filter((k) => env[k]);
+  const skipped = OPTIONAL_KEYS.filter((k) => !env[k]);
+  if (skipped.length) console.log(`Skipping unset optional keys: ${skipped.join(", ")}`);
+
   // DATABASE_URL is deliberately excluded. It is only used by the local seed
   // and schema scripts; the deployed app never opens a raw Postgres connection.
-  for (const key of KEYS) {
+  for (const key of present) {
     for (const environment of ENVIRONMENTS) {
       try {
         await addVar(key, env[key], environment);

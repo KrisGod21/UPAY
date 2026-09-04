@@ -84,11 +84,14 @@ Open http://localhost:3000 and sign in with any demo account below.
 | `SUPABASE_SERVICE_ROLE_KEY` | same page, `service_role` — server-only, bypasses all RLS |
 | `DATABASE_URL` | Project Settings → Database → **Session pooler** URI |
 | `GEMINI_API_KEY` | https://aistudio.google.com/apikey |
+| `NEXT_PUBLIC_BOTPRESS_INJECT_SRC` (optional) | Botpress Cloud → your bot → Integrations → Webchat → Embed |
+| `NEXT_PUBLIC_BOTPRESS_CONFIG_SRC` (optional) | same page, the `files.bpcontent.cloud/.../config.js` link |
 
 Use the **Session pooler** connection string, not `Direct connection` — the direct
 host is IPv6-only and will not resolve from most networks. `DATABASE_URL` is used
 only by `db:push` and `db:seed`; the deployed app never opens a raw Postgres
-connection.
+connection. The two Botpress variables are optional — the chatbot widget simply
+doesn't render until both are set.
 
 ### Demo accounts
 
